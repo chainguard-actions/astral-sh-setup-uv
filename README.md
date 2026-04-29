@@ -1,5 +1,7 @@
 # astral-sh/setup-uv
 
+Set up your GitHub Actions workflow with a specific version of https://docs.astral.sh/uv/
+
 Hardened by [Chainguard](https://www.chainguard.dev) from the upstream action at [https://github.com/astral-sh/setup-uv](https://github.com/astral-sh/setup-uv).
 
 ## Versions
