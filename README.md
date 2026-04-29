@@ -1,6 +1,12 @@
 # astral-sh/setup-uv
 
-Hardened GitHub Action by [Chainguard](https://www.chainguard.dev).
+Hardened by [Chainguard](https://www.chainguard.dev) from the upstream action at [https://github.com/astral-sh/setup-uv](https://github.com/astral-sh/setup-uv).
+
+## Versions
+
+| Version | Tag | Upstream commit |
+|---------|-----|-----------------|
+| v7.6.0 | [`v7.6.0`](https://github.com/chainguard-actions/setup-uv/tree/v7.6.0) | — |
 
 ## Privacy
 
