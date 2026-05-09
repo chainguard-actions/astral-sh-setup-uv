@@ -1,4 +1,6 @@
 {
-  "upstream": "astral-sh/setup-uv",
-  "version": "v7.6.0"
+  "owner": "astral-sh",
+  "repo": "setup-uv",
+  "version": "",
+  "url": "https://github.com/astral-sh/setup-uv"
 }

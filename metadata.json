@@ -2,5 +2,6 @@
   "owner": "astral-sh",
   "name": "setup-uv",
   "visibility": "internal",
-  "description": "Set up your GitHub Actions workflow with a specific version of https://docs.astral.sh/uv/"
+  "description": "Set up your GitHub Actions workflow with a specific version of https://docs.astral.sh/uv/",
+  "block_publish": false
 }
