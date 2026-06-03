@@ -1,4 +1,4 @@
-name: Test uv setup with tool-dir and tool-bin-dir
+name: Test tool-dir and tool-bin-dir inputs
 on:
   workflow_dispatch:
 jobs:
@@ -6,28 +6,28 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - id: setup-uv
+      - id: action
         uses: .
         with:
           version: "0.5.0"
           tool-dir: "/tmp/uv-tools"
           tool-bin-dir: "/tmp/uv-tool-bin"
           enable-cache: "false"
-      - name: Assert uv-version output is set
+      - name: Assert uv-version output
         env:
-          ACTUAL: ${{ steps.setup-uv.outputs.uv-version }}
+          UV_VERSION: ${{ steps.action.outputs.uv-version }}
         run: |
-          echo "actual uv-version: $ACTUAL"
-          if [ -z "$ACTUAL" ]; then
+          echo "uv-version: $UV_VERSION"
+          if [ -z "$UV_VERSION" ]; then
             echo "FAIL: uv-version output is empty"
             exit 1
           fi
-          echo "PASS: uv-version=$ACTUAL"
+          echo "PASS: uv-version=$UV_VERSION"
       - name: Assert UV_TOOL_DIR env var is set
         run: |
           echo "UV_TOOL_DIR=$UV_TOOL_DIR"
           if [ "$UV_TOOL_DIR" != "/tmp/uv-tools" ]; then
-            echo "FAIL: expected UV_TOOL_DIR=/tmp/uv-tools, got $UV_TOOL_DIR"
+            echo "FAIL: UV_TOOL_DIR expected '/tmp/uv-tools', got '$UV_TOOL_DIR'"
             exit 1
           fi
           echo "PASS: UV_TOOL_DIR=$UV_TOOL_DIR"
@@ -35,7 +35,7 @@ jobs:
         run: |
           echo "UV_TOOL_BIN_DIR=$UV_TOOL_BIN_DIR"
           if [ "$UV_TOOL_BIN_DIR" != "/tmp/uv-tool-bin" ]; then
-            echo "FAIL: expected UV_TOOL_BIN_DIR=/tmp/uv-tool-bin, got $UV_TOOL_BIN_DIR"
+            echo "FAIL: UV_TOOL_BIN_DIR expected '/tmp/uv-tool-bin', got '$UV_TOOL_BIN_DIR'"
             exit 1
           fi
           echo "PASS: UV_TOOL_BIN_DIR=$UV_TOOL_BIN_DIR"

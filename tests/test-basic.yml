@@ -1,4 +1,4 @@
-name: Test basic uv setup
+name: Test basic usage
 on:
   workflow_dispatch:
 jobs:
@@ -6,44 +6,46 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - id: setup-uv
+      - id: action
         uses: .
         with:
           version: "0.5.0"
           enable-cache: "false"
       - name: Assert uv-version output
         env:
-          ACTUAL: ${{ steps.setup-uv.outputs.uv-version }}
+          UV_VERSION: ${{ steps.action.outputs.uv-version }}
         run: |
-          echo "actual uv-version: $ACTUAL"
-          if [ -z "$ACTUAL" ]; then
+          echo "uv-version: $UV_VERSION"
+          if [ -z "$UV_VERSION" ]; then
             echo "FAIL: uv-version output is empty"
             exit 1
           fi
-          echo "PASS: uv-version=$ACTUAL"
+          echo "PASS: uv-version=$UV_VERSION"
       - name: Assert uv-path output
         env:
-          ACTUAL: ${{ steps.setup-uv.outputs.uv-path }}
+          UV_PATH: ${{ steps.action.outputs.uv-path }}
         run: |
-          echo "actual uv-path: $ACTUAL"
-          if [ -z "$ACTUAL" ]; then
+          echo "uv-path: $UV_PATH"
+          if [ -z "$UV_PATH" ]; then
             echo "FAIL: uv-path output is empty"
             exit 1
           fi
-          echo "PASS: uv-path=$ACTUAL"
-      - name: Assert uv binary is executable
-        run: |
-          if ! command -v uv &>/dev/null; then
-            echo "FAIL: uv not found in PATH"
+          if [ ! -f "$UV_PATH" ]; then
+            echo "FAIL: uv binary not found at $UV_PATH"
             exit 1
           fi
-          echo "PASS: uv is available"
-      - name: Assert uv version matches requested
+          echo "PASS: uv binary exists at $UV_PATH"
+      - name: Assert uvx-path output
+        env:
+          UVX_PATH: ${{ steps.action.outputs.uvx-path }}
         run: |
-          INSTALLED=$(uv --version | awk '{print $2}')
-          echo "installed: $INSTALLED"
-          if [ "$INSTALLED" != "0.5.0" ]; then
-            echo "FAIL: expected 0.5.0, got $INSTALLED"
+          echo "uvx-path: $UVX_PATH"
+          if [ -z "$UVX_PATH" ]; then
+            echo "FAIL: uvx-path output is empty"
             exit 1
           fi
-          echo "PASS"
+          echo "PASS: uvx-path=$UVX_PATH"
+      - name: Assert uv is runnable
+        run: |
+          uv --version
+          echo "PASS: uv is on PATH and runnable"

@@ -1,4 +1,4 @@
-name: Test uv setup with checksum verification
+name: Test checksum input
 on:
   workflow_dispatch:
 jobs:
@@ -6,24 +6,30 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - id: setup-uv
+      - name: Get uv checksum for version 0.5.0
+        id: get-checksum
+        run: |
+          # Download the sha256 hash file for uv 0.5.0 linux x86_64
+          CHECKSUM=$(curl -fsSL "https://github.com/astral-sh/uv/releases/download/0.5.0/uv-x86_64-unknown-linux-gnu.tar.gz.sha256" | awk '{print $1}')
+          echo "checksum=$CHECKSUM" >> "$GITHUB_OUTPUT"
+          echo "Checksum: $CHECKSUM"
+      - id: action
         uses: .
         with:
           version: "0.5.0"
-          # SHA256 checksum for uv 0.5.0 linux x86_64 installer
-          checksum: "d5e9b5a5c9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9"
+          checksum: ${{ steps.get-checksum.outputs.checksum }}
           enable-cache: "false"
-        continue-on-error: true
-      - name: Assert action ran (checksum may fail with wrong value)
+      - name: Assert uv-version output
         env:
-          OUTCOME: ${{ steps.setup-uv.outcome }}
+          UV_VERSION: ${{ steps.action.outputs.uv-version }}
         run: |
-          echo "outcome: $OUTCOME"
-          # The action may fail if checksum doesn't match, which is expected behavior
-          # We just verify the input is accepted and processed
-          if [ "$OUTCOME" = "success" ] || [ "$OUTCOME" = "failure" ]; then
-            echo "PASS: action processed checksum input (outcome=$OUTCOME)"
-          else
-            echo "FAIL: unexpected outcome: $OUTCOME"
+          echo "uv-version: $UV_VERSION"
+          if [ -z "$UV_VERSION" ]; then
+            echo "FAIL: uv-version output is empty"
             exit 1
           fi
+          echo "PASS: uv-version=$UV_VERSION"
+      - name: Assert uv is runnable
+        run: |
+          uv --version
+          echo "PASS: uv is on PATH and runnable"
