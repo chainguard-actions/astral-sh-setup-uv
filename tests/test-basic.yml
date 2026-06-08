@@ -1,0 +1,41 @@
+name: Test basic usage
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          version: "0.5.0"
+          python-version: "3.11"
+          enable-cache: "false"
+      - name: Assert uv-version output
+        env:
+          ACTUAL: ${{ steps.action.outputs.uv-version }}
+        run: |
+          echo "actual uv-version: $ACTUAL"
+          if [ -z "$ACTUAL" ]; then
+            echo "FAIL: uv-version output is empty"
+            exit 1
+          fi
+          echo "PASS: uv-version=$ACTUAL"
+      - name: Assert uv-path output
+        env:
+          ACTUAL: ${{ steps.action.outputs.uv-path }}
+        run: |
+          echo "actual uv-path: $ACTUAL"
+          if [ -z "$ACTUAL" ]; then
+            echo "FAIL: uv-path output is empty"
+            exit 1
+          fi
+          echo "PASS: uv-path=$ACTUAL"
+      - name: Assert uv binary is executable
+        run: |
+          if ! command -v uv &>/dev/null; then
+            echo "FAIL: uv not found in PATH"
+            exit 1
+          fi
+          echo "PASS: uv found at $(command -v uv)"
