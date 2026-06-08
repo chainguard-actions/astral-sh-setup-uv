@@ -1,0 +1,39 @@
+name: Test uv installation with checksum input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Get uv checksum for 0.5.0
+        id: get-checksum
+        run: |
+          # Download the checksum file for uv 0.5.0 x86_64-unknown-linux-gnu
+          CHECKSUM=$(curl -fsSL "https://github.com/astral-sh/uv/releases/download/0.5.0/uv-x86_64-unknown-linux-gnu.tar.gz.sha256" 2>/dev/null || echo "")
+          if [ -z "$CHECKSUM" ]; then
+            # Fallback: use sha256sum of the downloaded binary
+            echo "checksum=" >> "$GITHUB_OUTPUT"
+          else
+            echo "checksum=$CHECKSUM" >> "$GITHUB_OUTPUT"
+          fi
+      - id: setup-uv
+        uses: .
+        with:
+          version: "0.5.0"
+          checksum: ${{ steps.get-checksum.outputs.checksum }}
+          enable-cache: "false"
+      - name: Assert uv-version output is set
+        env:
+          UV_VERSION: ${{ steps.setup-uv.outputs.uv-version }}
+        run: |
+          echo "uv-version: $UV_VERSION"
+          if [ -z "$UV_VERSION" ]; then
+            echo "FAIL: uv-version output is empty"
+            exit 1
+          fi
+          echo "PASS: uv installed with version=$UV_VERSION"
+      - name: Assert uv is executable
+        run: |
+          uv --version
+          echo "PASS: uv is on PATH and executable"

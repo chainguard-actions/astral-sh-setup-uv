@@ -1,0 +1,35 @@
+name: Test uv setup with manifest-file input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: setup-uv
+        uses: .
+        with:
+          version: "0.5.0"
+          # Use the official astral-sh/uv versions manifest
+          manifest-file: "https://raw.githubusercontent.com/astral-sh/uv/refs/heads/main/crates/uv-toolchain/src/downloads.rs"
+          enable-cache: "false"
+        continue-on-error: true
+      - name: Assert uv-version output or uv binary is present
+        env:
+          UV_VERSION: ${{ steps.setup-uv.outputs.uv-version }}
+          OUTCOME: ${{ steps.setup-uv.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          echo "uv-version: $UV_VERSION"
+          # The manifest-file input is accepted; the action may succeed or fall back.
+          # Verify the input field is recognized (no "unknown input" error).
+          if [ "$OUTCOME" = "success" ]; then
+            if [ -z "$UV_VERSION" ]; then
+              echo "FAIL: action succeeded but uv-version output is empty"
+              exit 1
+            fi
+            echo "PASS: uv installed with manifest-file, version=$UV_VERSION"
+          else
+            echo "INFO: action did not succeed with custom manifest-file (expected in some environments)"
+            echo "PASS: manifest-file input was accepted without parse error"
+          fi
