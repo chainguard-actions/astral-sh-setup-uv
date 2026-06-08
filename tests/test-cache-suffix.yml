@@ -1,0 +1,41 @@
+name: Test uv setup with cache-suffix
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: setup-uv
+        uses: .
+        with:
+          version: "0.5.0"
+          enable-cache: "true"
+          cache-suffix: "-py311"
+          restore-cache: "false"
+          save-cache: "false"
+      - name: Assert uv-version output
+        env:
+          UV_VERSION: ${{ steps.setup-uv.outputs.uv-version }}
+        run: |
+          echo "uv-version: $UV_VERSION"
+          if [ -z "$UV_VERSION" ]; then
+            echo "FAIL: uv-version output is empty"
+            exit 1
+          fi
+          echo "PASS"
+      - name: Assert cache-key output contains suffix
+        env:
+          CACHE_KEY: ${{ steps.setup-uv.outputs.cache-key }}
+        run: |
+          echo "cache-key: $CACHE_KEY"
+          if [ -z "$CACHE_KEY" ]; then
+            echo "FAIL: cache-key output is empty"
+            exit 1
+          fi
+          if echo "$CACHE_KEY" | grep -q "\-py311"; then
+            echo "PASS: cache-key contains suffix '-py311'"
+          else
+            echo "FAIL: cache-key '$CACHE_KEY' does not contain '-py311'"
+            exit 1
+          fi

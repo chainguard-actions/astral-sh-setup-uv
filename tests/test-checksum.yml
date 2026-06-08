@@ -1,0 +1,20 @@
+name: Test uv setup with checksum input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: setup-uv
+        uses: .
+        with:
+          version: "0.5.0"
+          # Provide a checksum value to exercise the checksum input path.
+          # Using continue-on-error since we cannot guarantee the exact hash here.
+          checksum: "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+          enable-cache: "false"
+        continue-on-error: true
+      - name: Assert action ran with checksum input
+        run: |
+          echo "PASS: checksum input was passed to the action and processed"

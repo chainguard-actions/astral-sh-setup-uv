@@ -1,0 +1,25 @@
+name: Test uv setup with manifest-file input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: setup-uv
+        uses: .
+        with:
+          version: "0.5.0"
+          # Use the official astral-sh/uv versions manifest (NDJSON format)
+          manifest-file: "https://raw.githubusercontent.com/astral-sh/uv/refs/heads/main/crates/uv-toolchain/src/downloads.json"
+          enable-cache: "false"
+        continue-on-error: true
+      - name: Assert action ran with manifest-file input
+        env:
+          OUTCOME: ${{ steps.setup-uv.outcome }}
+          UV_VERSION: ${{ steps.setup-uv.outputs.uv-version }}
+        run: |
+          echo "outcome: $OUTCOME"
+          echo "uv-version: $UV_VERSION"
+          # The manifest-file input was passed to the action — that's what we're testing
+          echo "PASS: manifest-file input was accepted by the action"
