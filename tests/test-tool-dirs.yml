@@ -1,4 +1,4 @@
-name: Test tool-dir and tool-bin-dir inputs
+name: Test uv tool directory configuration
 on:
   workflow_dispatch:
 jobs:
@@ -9,24 +9,23 @@ jobs:
       - id: action
         uses: .
         with:
-          version: "0.5.0"
+          version: "latest"
+          enable-cache: "false"
           tool-dir: "/tmp/uv-tools"
           tool-bin-dir: "/tmp/uv-tool-bin"
-          cache-suffix: "test-suffix"
-          enable-cache: "false"
       - name: Assert uv-version output is set
         env:
-          ACTUAL: ${{ steps.action.outputs.uv-version }}
+          UV_VERSION: ${{ steps.action.outputs.uv-version }}
         run: |
-          echo "actual uv-version: $ACTUAL"
-          if [ -z "$ACTUAL" ]; then
+          echo "uv-version: $UV_VERSION"
+          if [ -z "$UV_VERSION" ]; then
             echo "FAIL: uv-version output is empty"
             exit 1
           fi
-          echo "PASS: uv-version=$ACTUAL"
+          echo "PASS"
       - name: Assert UV_TOOL_DIR env var is set
         run: |
-          echo "UV_TOOL_DIR=$UV_TOOL_DIR"
+          echo "UV_TOOL_DIR: $UV_TOOL_DIR"
           if [ "$UV_TOOL_DIR" != "/tmp/uv-tools" ]; then
             echo "FAIL: expected UV_TOOL_DIR=/tmp/uv-tools, got $UV_TOOL_DIR"
             exit 1
@@ -34,7 +33,7 @@ jobs:
           echo "PASS"
       - name: Assert UV_TOOL_BIN_DIR env var is set
         run: |
-          echo "UV_TOOL_BIN_DIR=$UV_TOOL_BIN_DIR"
+          echo "UV_TOOL_BIN_DIR: $UV_TOOL_BIN_DIR"
           if [ "$UV_TOOL_BIN_DIR" != "/tmp/uv-tool-bin" ]; then
             echo "FAIL: expected UV_TOOL_BIN_DIR=/tmp/uv-tool-bin, got $UV_TOOL_BIN_DIR"
             exit 1
