@@ -1,4 +1,4 @@
-name: Test basic usage
+name: Test activate-environment input
 on:
   workflow_dispatch:
 jobs:
@@ -10,6 +10,8 @@ jobs:
         uses: .
         with:
           version: "0.5.0"
+          activate-environment: "true"
+          venv-path: "/tmp/test-venv"
           enable-cache: "false"
       - name: Assert uv-version output
         env:
@@ -21,17 +23,20 @@ jobs:
             exit 1
           fi
           echo "PASS: uv-version=$ACTUAL"
-      - name: Assert uv-path output
+      - name: Assert venv output
         env:
-          ACTUAL: ${{ steps.action.outputs.uv-path }}
+          ACTUAL: ${{ steps.action.outputs.venv }}
         run: |
-          echo "actual uv-path: $ACTUAL"
+          echo "actual venv: $ACTUAL"
           if [ -z "$ACTUAL" ]; then
-            echo "FAIL: uv-path output is empty"
+            echo "FAIL: venv output is empty when activate-environment=true"
             exit 1
           fi
-          echo "PASS: uv-path=$ACTUAL"
-      - name: Assert uv binary is executable
+          echo "PASS: venv=$ACTUAL"
+      - name: Assert venv directory exists
         run: |
-          uv --version
-          echo "PASS: uv is on PATH and executable"
+          if [ ! -d "/tmp/test-venv" ]; then
+            echo "FAIL: venv directory /tmp/test-venv does not exist"
+            exit 1
+          fi
+          echo "PASS: venv directory exists"
