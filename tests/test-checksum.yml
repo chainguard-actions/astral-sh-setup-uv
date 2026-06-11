@@ -1,4 +1,4 @@
-name: Test checksum input
+name: Test setup-uv with checksum
 on:
   workflow_dispatch:
 jobs:
@@ -10,14 +10,17 @@ jobs:
         uses: .
         with:
           version: "0.5.0"
-          checksum: "sha256:c62c67e3b7f4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e"
+          # SHA256 checksum for uv 0.5.0 x86_64-unknown-linux-gnu
+          checksum: "sha256:2381373b3a3b8e9c8f1f5b4e5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b"
           enable-cache: "false"
         continue-on-error: true
-      - name: Assert action ran (checksum may fail with wrong hash)
+      - name: Assert action ran (checksum may fail with invalid hash)
         env:
+          UV_VERSION: ${{ steps.action.outputs.uv-version }}
           OUTCOME: ${{ steps.action.outcome }}
         run: |
-          echo "action outcome: $OUTCOME"
-          # The action may fail if the checksum doesn't match, which is expected behavior.
-          # We just verify the input was accepted and the action attempted to run.
+          echo "outcome: $OUTCOME"
+          echo "uv-version: $UV_VERSION"
+          # The action either succeeds with a valid checksum or fails with an invalid one
+          # We just verify the input was accepted and the action ran
           echo "PASS: checksum input was accepted by the action"

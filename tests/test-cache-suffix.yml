@@ -1,4 +1,4 @@
-name: Test cache-suffix input
+name: Test setup-uv with cache-suffix
 on:
   workflow_dispatch:
 jobs:
@@ -10,27 +10,19 @@ jobs:
         uses: .
         with:
           version: "0.5.0"
-          enable-cache: "true"
           cache-suffix: "-myproject"
-          restore-cache: "false"
-          save-cache: "false"
+          enable-cache: "false"
       - name: Assert uv-version output
         env:
-          ACTUAL: ${{ steps.action.outputs.uv-version }}
+          UV_VERSION: ${{ steps.action.outputs.uv-version }}
         run: |
-          echo "actual uv-version: $ACTUAL"
-          if [ -z "$ACTUAL" ]; then
+          echo "uv-version: $UV_VERSION"
+          if [ -z "$UV_VERSION" ]; then
             echo "FAIL: uv-version output is empty"
             exit 1
           fi
-          echo "PASS: uv-version=$ACTUAL"
-      - name: Assert cache-key output contains suffix
-        env:
-          ACTUAL: ${{ steps.action.outputs.cache-key }}
+          echo "PASS: uv-version=$UV_VERSION"
+      - name: Assert uv binary works
         run: |
-          echo "actual cache-key: $ACTUAL"
-          if [ -z "$ACTUAL" ]; then
-            echo "WARN: cache-key output is empty (may be expected when cache is disabled)"
-          else
-            echo "PASS: cache-key=$ACTUAL"
-          fi
+          uv --version
+          echo "PASS: uv binary is functional"

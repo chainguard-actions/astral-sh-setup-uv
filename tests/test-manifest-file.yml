@@ -1,4 +1,4 @@
-name: Test manifest-file input
+name: Test setup-uv with manifest-file
 on:
   workflow_dispatch:
 jobs:
@@ -9,17 +9,15 @@ jobs:
       - id: action
         uses: .
         with:
-          version: "latest"
-          manifest-file: "https://raw.githubusercontent.com/astral-sh/uv/main/crates/uv-version/src/version.rs"
+          version: "0.5.0"
+          manifest-file: "https://raw.githubusercontent.com/astral-sh/uv/main/crates/uv-toolchain/src/downloads.json"
           enable-cache: "false"
         continue-on-error: true
       - name: Assert action ran with manifest-file input
         env:
           OUTCOME: ${{ steps.action.outcome }}
-          UV_VERSION: ${{ steps.action.outputs.uv-version }}
         run: |
-          echo "action outcome: $OUTCOME"
-          echo "uv-version: $UV_VERSION"
-          # The manifest-file input may cause the action to fail if the URL is not a valid manifest.
-          # We just verify the input was accepted and the action attempted to run.
+          echo "outcome: $OUTCOME"
+          # The action may succeed or fail depending on the manifest URL validity
+          # We just verify the input was accepted and the action ran
           echo "PASS: manifest-file input was accepted by the action"
