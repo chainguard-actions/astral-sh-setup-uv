@@ -1,23 +1,20 @@
-name: Test basic uv setup with python-version
+name: Test basic uv setup
 on:
   workflow_dispatch:
 jobs:
   test:
     runs-on: ubuntu-latest
-    env:
-      GITHUB_REF: refs/heads/main
-      GITHUB_EVENT_NAME: push
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - id: action
+      - id: setup-uv
         uses: .
         with:
           version: "0.5.0"
-          python-version: "3.11"
+          python-version: "3.12"
           enable-cache: "false"
       - name: Assert uv-version output
         env:
-          UV_VERSION: ${{ steps.action.outputs.uv-version }}
+          UV_VERSION: ${{ steps.setup-uv.outputs.uv-version }}
         run: |
           echo "uv-version: $UV_VERSION"
           if [ -z "$UV_VERSION" ]; then
@@ -25,7 +22,7 @@ jobs:
             exit 1
           fi
           echo "PASS"
-      - name: Assert uv is installed
+      - name: Assert uv is executable
         run: |
           which uv
           uv --version
