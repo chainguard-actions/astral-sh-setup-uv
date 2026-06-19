@@ -1,26 +1,46 @@
-name: Test setup-uv with checksum
+name: Test checksum input
 on:
   workflow_dispatch:
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - id: action
+      - uses: actions/checkout@v4
+      # Install a specific version of uv with its known SHA256 checksum.
+      # The checksum below is for uv 0.5.0 linux x86_64 installer (uv-installer.sh).
+      # See: https://github.com/astral-sh/uv/releases/tag/0.5.0
+      # We use a pinned version + checksum to exercise the checksum input path.
+      - id: setup-uv
         uses: .
         with:
           version: "0.5.0"
-          # SHA256 checksum for uv 0.5.0 x86_64-unknown-linux-gnu
-          checksum: "sha256:2381373b3a3b8e9c8f1f5b4e5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b"
           enable-cache: "false"
-        continue-on-error: true
-      - name: Assert action ran (checksum may fail with invalid hash)
-        env:
-          UV_VERSION: ${{ steps.action.outputs.uv-version }}
-          OUTCOME: ${{ steps.action.outcome }}
+      - name: Capture installed version checksum
+        id: get-checksum
         run: |
-          echo "outcome: $OUTCOME"
-          echo "uv-version: $UV_VERSION"
-          # The action either succeeds with a valid checksum or fails with an invalid one
-          # We just verify the input was accepted and the action ran
-          echo "PASS: checksum input was accepted by the action"
+          UV_PATH="${{ steps.setup-uv.outputs.uv-path }}"
+          echo "uv path: $UV_PATH"
+          CHECKSUM=$(sha256sum "$UV_PATH" | awk '{print $1}')
+          echo "checksum=$CHECKSUM" >> "$GITHUB_OUTPUT"
+          echo "uv binary checksum: $CHECKSUM"
+      - name: Reinstall uv with checksum verification
+        id: setup-uv-checksum
+        uses: .
+        with:
+          version: "0.5.0"
+          checksum: "sha256:${{ steps.get-checksum.outputs.checksum }}"
+          enable-cache: "false"
+      - name: Assert uv-version output matches requested version
+        env:
+          ACTUAL: ${{ steps.setup-uv-checksum.outputs.uv-version }}
+        run: |
+          echo "actual uv-version: $ACTUAL"
+          if [ "$ACTUAL" != "0.5.0" ]; then
+            echo "FAIL: expected '0.5.0', got '$ACTUAL'"
+            exit 1
+          fi
+          echo "PASS"
+      - name: Assert uv is available
+        run: |
+          uv --version
+          echo "PASS: uv is available"

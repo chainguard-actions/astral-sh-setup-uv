@@ -1,4 +1,4 @@
-name: Test activate-environment input
+name: Test uv with virtual environment activation
 on:
   workflow_dispatch:
 jobs:
@@ -6,37 +6,43 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - id: action
+      - id: setup-uv
         uses: .
         with:
           version: "0.5.0"
+          python-version: "3.12"
           activate-environment: "true"
-          venv-path: "/tmp/test-venv"
           enable-cache: "false"
-      - name: Assert uv-version output
+      - name: Assert venv output is set
         env:
-          ACTUAL: ${{ steps.action.outputs.uv-version }}
+          VENV_PATH: ${{ steps.setup-uv.outputs.venv }}
         run: |
-          echo "actual uv-version: $ACTUAL"
-          if [ -z "$ACTUAL" ]; then
-            echo "FAIL: uv-version output is empty"
+          echo "venv: $VENV_PATH"
+          if [ -z "$VENV_PATH" ]; then
+            echo "FAIL: venv output is empty"
             exit 1
           fi
-          echo "PASS: uv-version=$ACTUAL"
-      - name: Assert venv output
+          echo "PASS: venv=$VENV_PATH"
+      - name: Assert virtual environment directory exists
         env:
-          ACTUAL: ${{ steps.action.outputs.venv }}
+          VENV_PATH: ${{ steps.setup-uv.outputs.venv }}
         run: |
-          echo "actual venv: $ACTUAL"
-          if [ -z "$ACTUAL" ]; then
-            echo "FAIL: venv output is empty when activate-environment=true"
-            exit 1
-          fi
-          echo "PASS: venv=$ACTUAL"
-      - name: Assert venv directory exists
-        run: |
-          if [ ! -d "/tmp/test-venv" ]; then
-            echo "FAIL: venv directory /tmp/test-venv does not exist"
+          echo "Checking venv directory: $VENV_PATH"
+          if [ ! -d "$VENV_PATH" ]; then
+            echo "FAIL: venv directory does not exist at '$VENV_PATH'"
             exit 1
           fi
           echo "PASS: venv directory exists"
+      - name: Assert VIRTUAL_ENV is set in environment
+        run: |
+          echo "VIRTUAL_ENV: $VIRTUAL_ENV"
+          if [ -z "$VIRTUAL_ENV" ]; then
+            echo "FAIL: VIRTUAL_ENV env var is not set"
+            exit 1
+          fi
+          echo "PASS: VIRTUAL_ENV=$VIRTUAL_ENV"
+      - name: Assert python is available from venv
+        run: |
+          which python
+          python --version
+          echo "PASS: python is available"
