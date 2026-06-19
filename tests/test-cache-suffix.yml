@@ -6,15 +6,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - id: setup-uv
+      - id: action
         uses: .
         with:
           version: "latest"
-          cache-suffix: "-myproject"
           enable-cache: "false"
+          cache-suffix: "-myproject"
       - name: Assert uv-version output is set
         env:
-          UV_VERSION: ${{ steps.setup-uv.outputs.uv-version }}
+          UV_VERSION: ${{ steps.action.outputs.uv-version }}
         run: |
           echo "uv-version: $UV_VERSION"
           if [ -z "$UV_VERSION" ]; then
@@ -22,10 +22,10 @@ jobs:
             exit 1
           fi
           echo "PASS"
-      - name: Assert uv is executable
+      - name: Assert uv binary is available
         run: |
-          if ! uv --version; then
-            echo "FAIL: uv is not executable"
+          if ! command -v uv &>/dev/null; then
+            echo "FAIL: uv binary not found in PATH"
             exit 1
           fi
-          echo "PASS"
+          echo "PASS: uv found at $(command -v uv)"

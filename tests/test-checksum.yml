@@ -6,22 +6,28 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - id: setup-uv
+      - id: action
         uses: .
         with:
-          version: "0.5.0"
+          version: "0.9.26"
           enable-cache: "false"
-          checksum: "sha256:b4a8e0f2c3d1e5f7a9b2c4d6e8f0a1b3c5d7e9f1a3b5c7d9e1f3a5b7c9d1e3f5"
-        continue-on-error: true
-      - name: Assert action ran with checksum input (not skipped)
+          checksum: "30ccbf0a66dc8727a02b0e245c583ee970bdafecf3a443c1686e1b30ec4939e8"
+      - name: Assert uv-version output matches requested version
         env:
-          OUTCOME: ${{ steps.setup-uv.outcome }}
+          UV_VERSION: ${{ steps.action.outputs.uv-version }}
         run: |
-          echo "outcome: $OUTCOME"
-          # The action should run (succeed or fail) but not be skipped.
-          # A 'skipped' outcome would mean the input was not processed at all.
-          if [ "$OUTCOME" = "skipped" ]; then
-            echo "FAIL: action was skipped, expected it to run"
+          echo "uv-version: $UV_VERSION"
+          if [ "$UV_VERSION" != "0.9.26" ]; then
+            echo "FAIL: expected uv-version '0.9.26', got '$UV_VERSION'"
             exit 1
           fi
-          echo "PASS: action ran with checksum input (outcome=$OUTCOME)"
+          echo "PASS: uv-version=$UV_VERSION"
+      - name: Assert uv binary reports correct version
+        run: |
+          INSTALLED=$(uv --version | awk '{print $2}')
+          echo "installed version: $INSTALLED"
+          if [ "$INSTALLED" != "0.9.26" ]; then
+            echo "FAIL: expected uv 0.9.26, got $INSTALLED"
+            exit 1
+          fi
+          echo "PASS: uv version matches"
