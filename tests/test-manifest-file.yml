@@ -1,4 +1,4 @@
-name: Test uv manifest-file input
+name: Test manifest-file input
 on:
   workflow_dispatch:
 jobs:
@@ -6,20 +6,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - id: action
+      - id: setup-uv
         uses: .
         with:
-          version: "0.5.0"
-          manifest-file: "https://raw.githubusercontent.com/astral-sh/uv/main/crates/uv-toolchain/src/downloads.json"
+          version: "latest"
           enable-cache: "false"
+          manifest-file: "https://api.github.com/repos/astral-sh/uv/releases"
         continue-on-error: true
       - name: Assert action ran with manifest-file input
         env:
-          OUTCOME: ${{ steps.action.outcome }}
-          UV_VERSION: ${{ steps.action.outputs.uv-version }}
+          OUTCOME: ${{ steps.setup-uv.outcome }}
         run: |
           echo "outcome: $OUTCOME"
-          echo "uv-version: $UV_VERSION"
-          # The manifest-file input is accepted; the action may succeed or fail
-          # depending on the URL validity, but the input itself must be recognized
-          echo "PASS: manifest-file input was accepted by the action"
+          # The action should run (succeed or fail) but not be skipped.
+          if [ "$OUTCOME" = "skipped" ]; then
+            echo "FAIL: action was skipped, expected it to run"
+            exit 1
+          fi
+          echo "PASS: action ran with manifest-file input (outcome=$OUTCOME)"

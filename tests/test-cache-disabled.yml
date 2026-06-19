@@ -1,0 +1,28 @@
+name: Test cache disabled
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: setup-uv
+        uses: .
+        with:
+          version: "0.5.0"
+          enable-cache: "false"
+      - name: Assert uv is installed
+        run: |
+          uv --version
+          echo "PASS: uv is installed"
+      - name: Assert cache-hit is false or empty when cache disabled
+        env:
+          CACHE_HIT: ${{ steps.setup-uv.outputs.cache-hit }}
+        run: |
+          echo "cache-hit: $CACHE_HIT"
+          # When cache is disabled, cache-hit should be empty or false
+          if [ "$CACHE_HIT" = "true" ]; then
+            echo "FAIL: cache-hit should not be true when enable-cache=false"
+            exit 1
+          fi
+          echo "PASS: cache-hit is not true (value: '$CACHE_HIT')"

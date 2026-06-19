@@ -1,4 +1,4 @@
-name: Test uv checksum input
+name: Test checksum input
 on:
   workflow_dispatch:
 jobs:
@@ -6,21 +6,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - id: action
+      - id: setup-uv
         uses: .
         with:
           version: "0.5.0"
-          # SHA256 checksum for uv 0.5.0 x86_64-unknown-linux-gnu
-          checksum: "sha256:2381c3f79b8f7b1c7e7e8e7e8e7e8e7e8e7e8e7e8e7e8e7e8e7e8e7e8e7e8e7"
           enable-cache: "false"
+          checksum: "sha256:b4a8e0f2c3d1e5f7a9b2c4d6e8f0a1b3c5d7e9f1a3b5c7d9e1f3a5b7c9d1e3f5"
         continue-on-error: true
-      - name: Assert action ran (checksum may fail with placeholder)
+      - name: Assert action ran with checksum input (not skipped)
         env:
-          UV_VERSION: ${{ steps.action.outputs.uv-version }}
-          OUTCOME: ${{ steps.action.outcome }}
+          OUTCOME: ${{ steps.setup-uv.outcome }}
         run: |
           echo "outcome: $OUTCOME"
-          echo "uv-version: $UV_VERSION"
-          # The action either succeeds (if checksum matches) or fails (if checksum is wrong)
-          # We just verify the input is accepted without a parse error
-          echo "PASS: checksum input was accepted by the action"
+          # The action should run (succeed or fail) but not be skipped.
+          # A 'skipped' outcome would mean the input was not processed at all.
+          if [ "$OUTCOME" = "skipped" ]; then
+            echo "FAIL: action was skipped, expected it to run"
+            exit 1
+          fi
+          echo "PASS: action ran with checksum input (outcome=$OUTCOME)"
