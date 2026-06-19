@@ -1,4 +1,4 @@
-name: Test basic uv setup
+name: Test basic usage (latest uv)
 on:
   workflow_dispatch:
 jobs:
@@ -9,9 +9,8 @@ jobs:
       - id: setup-uv
         uses: .
         with:
-          version: "0.5.0"
           enable-cache: "false"
-      - name: Assert uv-version output
+      - name: Assert uv-version output is set
         env:
           UV_VERSION: ${{ steps.setup-uv.outputs.uv-version }}
         run: |
@@ -21,7 +20,7 @@ jobs:
             exit 1
           fi
           echo "PASS: uv-version=$UV_VERSION"
-      - name: Assert uv-path output
+      - name: Assert uv-path output is set
         env:
           UV_PATH: ${{ steps.setup-uv.outputs.uv-path }}
         run: |
@@ -30,12 +29,32 @@ jobs:
             echo "FAIL: uv-path output is empty"
             exit 1
           fi
-          if [ ! -f "$UV_PATH" ]; then
-            echo "FAIL: uv binary not found at $UV_PATH"
+          echo "PASS: uv-path=$UV_PATH"
+      - name: Assert uvx-path output is set
+        env:
+          UVX_PATH: ${{ steps.setup-uv.outputs.uvx-path }}
+        run: |
+          echo "uvx-path: $UVX_PATH"
+          if [ -z "$UVX_PATH" ]; then
+            echo "FAIL: uvx-path output is empty"
             exit 1
           fi
-          echo "PASS: uv binary exists at $UV_PATH"
-      - name: Assert uv is executable
+          echo "PASS: uvx-path=$UVX_PATH"
+      - name: Assert uv binary is executable
+        env:
+          UV_PATH: ${{ steps.setup-uv.outputs.uv-path }}
         run: |
-          uv --version
-          echo "PASS: uv is on PATH and executable"
+          echo "Checking uv binary at: $UV_PATH"
+          if [ ! -x "$UV_PATH" ]; then
+            echo "FAIL: uv binary is not executable at $UV_PATH"
+            exit 1
+          fi
+          echo "PASS: uv binary is executable"
+      - name: Assert uv is on PATH
+        run: |
+          which uv
+          if ! uv --version; then
+            echo "FAIL: uv is not on PATH or not working"
+            exit 1
+          fi
+          echo "PASS: uv is on PATH and working"
