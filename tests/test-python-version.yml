@@ -1,4 +1,4 @@
-name: Test python-version input
+name: Test Python version configuration
 on:
   workflow_dispatch:
 jobs:
@@ -6,34 +6,34 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - id: action
+      - id: setup-uv
         uses: .
         with:
-          version: "0.5.0"
-          python-version: "3.11"
+          python-version: "3.12"
           enable-cache: "false"
-      - name: Assert uv-version output
+      - name: Assert python-version output is set
         env:
-          UV_VERSION: ${{ steps.action.outputs.uv-version }}
+          PYTHON_VERSION: ${{ steps.setup-uv.outputs.python-version }}
         run: |
-          echo "uv-version: $UV_VERSION"
-          if [ -z "$UV_VERSION" ]; then
-            echo "FAIL: uv-version output is empty"
+          echo "python-version: $PYTHON_VERSION"
+          if [ -z "$PYTHON_VERSION" ]; then
+            echo "FAIL: python-version output is empty"
             exit 1
           fi
-          echo "PASS: uv-version=$UV_VERSION"
-      - name: Assert python-version output
-        env:
-          PY_VERSION: ${{ steps.action.outputs.python-version }}
-        run: |
-          echo "python-version output: $PY_VERSION"
-          # The output may be empty if python is not installed yet, but UV_PYTHON should be set
-          echo "PASS: python-version step completed"
+          echo "PASS: python-version=$PYTHON_VERSION"
       - name: Assert UV_PYTHON env var is set
         run: |
-          echo "UV_PYTHON=$UV_PYTHON"
+          echo "UV_PYTHON: $UV_PYTHON"
           if [ -z "$UV_PYTHON" ]; then
-            echo "FAIL: UV_PYTHON env var is not set"
+            echo "FAIL: UV_PYTHON environment variable is not set"
             exit 1
           fi
           echo "PASS: UV_PYTHON=$UV_PYTHON"
+      - name: Assert uv is on PATH
+        run: |
+          if ! command -v uv &>/dev/null; then
+            echo "FAIL: uv not found on PATH"
+            exit 1
+          fi
+          echo "PASS: uv is on PATH"
+          uv --version
