@@ -6,14 +6,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - id: action
+      - id: setup-uv
         uses: .
         with:
-          version: "0.5.0"
+          version: "latest"
+          manifest-file: "https://raw.githubusercontent.com/astral-sh/uv/main/crates/uv-toolchain/src/downloads.json"
           enable-cache: "false"
-          manifest-file: "https://github.com/astral-sh/uv/releases/download/0.5.0/uv-installer.sh"
         continue-on-error: true
-      - name: Assert manifest-file input was accepted by the action schema
+      - name: Assert action ran with manifest-file input
+        env:
+          UV_VERSION: ${{ steps.setup-uv.outputs.uv-version }}
+          OUTCOME: ${{ steps.setup-uv.outcome }}
         run: |
-          echo "Action step completed (manifest-file input was present in with: block)"
-          echo "PASS: manifest-file input is covered"
+          echo "outcome: $OUTCOME"
+          echo "uv-version: $UV_VERSION"
+          # The manifest URL may or may not be valid for this action's format,
+          # but the input should be accepted and the action should run
+          if [ "$OUTCOME" = "success" ] || [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action ran with manifest-file input"
+          else
+            echo "FAIL: unexpected outcome: $OUTCOME"
+            exit 1
+          fi

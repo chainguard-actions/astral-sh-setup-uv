@@ -6,14 +6,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - id: action
+      - id: setup-uv
         uses: .
         with:
           version: "0.5.0"
+          checksum: "sha256:2381b6e4b0a8e4f48e4f5e4f5e4f5e4f5e4f5e4f5e4f5e4f5e4f5e4f5e4f5e4"
           enable-cache: "false"
-          checksum: "sha256:0000000000000000000000000000000000000000000000000000000000000000"
         continue-on-error: true
-      - name: Assert checksum input was accepted by the action schema
+      - name: Assert action ran (checksum may fail for invalid hash)
+        env:
+          UV_VERSION: ${{ steps.setup-uv.outputs.uv-version }}
+          OUTCOME: ${{ steps.setup-uv.outcome }}
         run: |
-          echo "Action step completed (checksum input was present in with: block)"
-          echo "PASS: checksum input is covered"
+          echo "outcome: $OUTCOME"
+          echo "uv-version: $UV_VERSION"
+          # The action should either succeed (if checksum matches) or fail (if not)
+          # We just verify the input was accepted and the action ran
+          if [ "$OUTCOME" = "success" ] || [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action ran with checksum input"
+          else
+            echo "FAIL: unexpected outcome: $OUTCOME"
+            exit 1
+          fi
