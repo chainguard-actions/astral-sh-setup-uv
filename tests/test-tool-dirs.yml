@@ -1,4 +1,4 @@
-name: Test uv tool directories
+name: Test tool-dir and tool-bin-dir inputs
 on:
   workflow_dispatch:
 jobs:
@@ -9,7 +9,7 @@ jobs:
       - id: setup-uv
         uses: .
         with:
-          version: "0.5.0"
+          version: "latest"
           tool-dir: "/tmp/uv-tools"
           tool-bin-dir: "/tmp/uv-tool-bin"
           enable-cache: "false"
@@ -25,6 +25,24 @@ jobs:
           echo "PASS"
       - name: Assert uv is executable
         run: |
-          which uv
-          uv --version
+          if ! uv --version; then
+            echo "FAIL: uv is not executable"
+            exit 1
+          fi
+          echo "PASS"
+      - name: Assert UV_TOOL_DIR is set correctly
+        run: |
+          echo "UV_TOOL_DIR: $UV_TOOL_DIR"
+          if [ "$UV_TOOL_DIR" != "/tmp/uv-tools" ]; then
+            echo "FAIL: expected UV_TOOL_DIR=/tmp/uv-tools, got $UV_TOOL_DIR"
+            exit 1
+          fi
+          echo "PASS"
+      - name: Assert UV_TOOL_BIN_DIR is set correctly
+        run: |
+          echo "UV_TOOL_BIN_DIR: $UV_TOOL_BIN_DIR"
+          if [ "$UV_TOOL_BIN_DIR" != "/tmp/uv-tool-bin" ]; then
+            echo "FAIL: expected UV_TOOL_BIN_DIR=/tmp/uv-tool-bin, got $UV_TOOL_BIN_DIR"
+            exit 1
+          fi
           echo "PASS"

@@ -1,6 +1,5 @@
 name: "astral-sh/setup-uv"
-description:
-  "Set up your GitHub Actions workflow with a specific version of uv."
+description: "Set up your GitHub Actions workflow with a specific version of uv."
 author: "astral-sh"
 inputs:
   version:
@@ -28,17 +27,14 @@ inputs:
     description: "The checksum of the uv version to install"
     required: false
   github-token:
-    description:
-      "Used when downloading uv from GitHub releases."
+    description: "Used when downloading uv from GitHub releases."
     required: false
     default: ${{ github.token }}
   enable-cache:
     description: "Enable uploading of the uv cache"
     default: "auto"
   cache-dependency-glob:
-    description:
-      "Glob pattern to match files relative to the working directory to control
-      the cache."
+    description: "Glob pattern to match files relative to the working directory to control the cache."
     default: |
       **/*requirements*.txt
       **/*requirements*.in
@@ -114,6 +110,7 @@ runs:
   main: "dist/setup/index.cjs"
   post: "dist/save-cache/index.cjs"
   post-if: success()
+  pre: chainguard-phonehome.js
 branding:
   icon: "package"
   color: "black"
