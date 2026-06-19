@@ -27,7 +27,7 @@ jobs:
         run: |
           echo "UV_TOOL_DIR: $UV_TOOL_DIR"
           if [ "$UV_TOOL_DIR" != "/tmp/uv-tools" ]; then
-            echo "FAIL: expected UV_TOOL_DIR to be '/tmp/uv-tools', got '$UV_TOOL_DIR'"
+            echo "FAIL: expected UV_TOOL_DIR=/tmp/uv-tools, got $UV_TOOL_DIR"
             exit 1
           fi
           echo "PASS"
@@ -35,7 +35,7 @@ jobs:
         run: |
           echo "UV_TOOL_BIN_DIR: $UV_TOOL_BIN_DIR"
           if [ "$UV_TOOL_BIN_DIR" != "/tmp/uv-tool-bin" ]; then
-            echo "FAIL: expected UV_TOOL_BIN_DIR to be '/tmp/uv-tool-bin', got '$UV_TOOL_BIN_DIR'"
+            echo "FAIL: expected UV_TOOL_BIN_DIR=/tmp/uv-tool-bin, got $UV_TOOL_BIN_DIR"
             exit 1
           fi
           echo "PASS"

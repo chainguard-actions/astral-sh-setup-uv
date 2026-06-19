@@ -10,8 +10,8 @@ jobs:
         uses: .
         with:
           version: "latest"
-          cache-suffix: "-my-custom-suffix"
           enable-cache: "false"
+          cache-suffix: "-myproject"
       - name: Assert uv-version output is set
         env:
           UV_VERSION: ${{ steps.action.outputs.uv-version }}
