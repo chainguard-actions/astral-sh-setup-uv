@@ -1,0 +1,26 @@
+---
+name: Release Drafter
+
+# yamllint disable-line rule:truthy
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+permissions: {}
+
+jobs:
+  update_release_draft:
+    name: ✏️ Draft release
+    runs-on: ubuntu-24.04-arm
+    permissions:
+      contents: write
+      pull-requests: read
+    steps:
+      - name: 🚀 Run Release Drafter
+        uses: release-drafter/release-drafter@4d75298e00d9e34c483e5ff8c68d0ea1c1940c1e # v7.5.1
+        with:
+          commitish: ${{ github.sha }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
