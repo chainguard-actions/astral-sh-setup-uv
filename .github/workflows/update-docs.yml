@@ -1,0 +1,87 @@
+name: "Update docs"
+on:
+  workflow_call:
+    inputs:
+      tag:
+        description: "Release tag to update docs for (e.g., v8.2.0)"
+        required: true
+        type: string
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  update-docs:
+    continue-on-error: ${{ github.event_name == 'workflow_call' }}
+    runs-on: ubuntu-24.04-arm
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+      - name: Get tag info
+        id: tag-info
+        run: |
+          if [ -n "$INPUT_TAG" ]; then
+            TAG_NAME="$INPUT_TAG"
+          else
+            TAG_NAME=$(git tag --list 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -1)
+          fi
+
+          if [[ ! "$TAG_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Tag must match vMAJOR.MINOR.PATCH (e.g., v8.2.0)"
+            exit 1
+          fi
+
+          COMMIT_SHA=$(git rev-list -n 1 "$TAG_NAME")
+          echo "tag=$TAG_NAME" >> "$GITHUB_OUTPUT"
+          echo "sha=$COMMIT_SHA" >> "$GITHUB_OUTPUT"
+        env:
+          INPUT_TAG: ${{ inputs.tag }}
+      - name: Update references in docs
+        run: |
+          OLD_REF=$(grep -oh 'astral-sh/setup-uv@[a-f0-9]\{40\} # v[0-9][^ ]*' README.md docs/*.md | head -1)
+          OLD_SHA=$(echo "$OLD_REF" | sed 's/astral-sh\/setup-uv@\([a-f0-9]*\) # .*/\1/')
+          OLD_VERSION=$(echo "$OLD_REF" | sed 's/astral-sh\/setup-uv@[a-f0-9]* # \(v[^ ]*\)/\1/')
+          echo "Replacing $OLD_SHA # $OLD_VERSION with $NEW_SHA # $NEW_VERSION"
+          find README.md docs/ -type f \( -name "*.md" \) -exec \
+            sed -i "s|$OLD_SHA # $OLD_VERSION|$NEW_SHA # $NEW_VERSION|g" {} +
+        env:
+          NEW_SHA: ${{ steps.tag-info.outputs.sha }}
+          NEW_VERSION: ${{ steps.tag-info.outputs.tag }}
+      - name: Check for changes
+        id: changes-exist
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+              echo "changes-exist=true" >> "$GITHUB_OUTPUT"
+          else
+              echo "changes-exist=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Commit and push changes
+        if: ${{ steps.changes-exist.outputs.changes-exist == 'true' }}
+        id: commit-and-push
+        continue-on-error: true
+        run: |
+          git config user.name "$GITHUB_ACTOR"
+          git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
+          git add .
+          git commit -m "docs: update version references to $NEW_VERSION"
+          git push origin HEAD:refs/heads/main
+        env:
+          NEW_VERSION: ${{ steps.tag-info.outputs.tag }}
+      - name: Create Pull Request
+        if: ${{ steps.changes-exist.outputs.changes-exist == 'true' && steps.commit-and-push.outcome != 'success' }}
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+        with:
+          commit-message: "docs: update version references to ${{ steps.tag-info.outputs.tag }}"
+          title: "docs: update version references to ${{ steps.tag-info.outputs.tag }}"
+          body: |
+            Update `uses: astral-sh/setup-uv@...` references in documentation to
+            `${{ steps.tag-info.outputs.sha }} # ${{ steps.tag-info.outputs.tag }}`.
+          base: main
+          labels: "automated-pr,documentation"
+          branch: update-docs-${{ steps.tag-info.outputs.tag }}
+          delete-branch: true
