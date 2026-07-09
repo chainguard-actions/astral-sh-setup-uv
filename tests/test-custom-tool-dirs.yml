@@ -1,0 +1,47 @@
+name: Test custom tool directories
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: setup-uv
+        uses: .
+        with:
+          version: "latest"
+          tool-dir: "/tmp/uv-tools"
+          tool-bin-dir: "/tmp/uv-tool-bin"
+      - name: Assert uv-version output is non-empty
+        env:
+          UV_VERSION: ${{ steps.setup-uv.outputs.uv-version }}
+        run: |
+          echo "uv-version: $UV_VERSION"
+          if [ -z "$UV_VERSION" ]; then
+            echo "FAIL: uv-version output is empty"
+            exit 1
+          fi
+          echo "PASS: uv-version is $UV_VERSION"
+      - name: Assert uv is available in PATH
+        run: |
+          if ! command -v uv &>/dev/null; then
+            echo "FAIL: uv not found in PATH"
+            exit 1
+          fi
+          echo "PASS: uv found at $(which uv)"
+      - name: Assert UV_TOOL_DIR is set correctly
+        run: |
+          echo "UV_TOOL_DIR: $UV_TOOL_DIR"
+          if [ "$UV_TOOL_DIR" != "/tmp/uv-tools" ]; then
+            echo "FAIL: expected UV_TOOL_DIR='/tmp/uv-tools' but got '$UV_TOOL_DIR'"
+            exit 1
+          fi
+          echo "PASS: UV_TOOL_DIR is set correctly"
+      - name: Assert UV_TOOL_BIN_DIR is set correctly
+        run: |
+          echo "UV_TOOL_BIN_DIR: $UV_TOOL_BIN_DIR"
+          if [ "$UV_TOOL_BIN_DIR" != "/tmp/uv-tool-bin" ]; then
+            echo "FAIL: expected UV_TOOL_BIN_DIR='/tmp/uv-tool-bin' but got '$UV_TOOL_BIN_DIR'"
+            exit 1
+          fi
+          echo "PASS: UV_TOOL_BIN_DIR is set correctly"

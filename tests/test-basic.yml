@@ -1,0 +1,39 @@
+name: Test basic usage - install latest uv
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: setup-uv
+        uses: .
+        with:
+          version: "latest"
+      - name: Assert uv-version output is non-empty
+        env:
+          UV_VERSION: ${{ steps.setup-uv.outputs.uv-version }}
+        run: |
+          echo "uv-version: $UV_VERSION"
+          if [ -z "$UV_VERSION" ]; then
+            echo "FAIL: uv-version output is empty"
+            exit 1
+          fi
+          echo "PASS: uv-version is $UV_VERSION"
+      - name: Assert uv is available in PATH
+        run: |
+          echo "which uv: $(which uv || echo 'not found')"
+          if ! command -v uv &>/dev/null; then
+            echo "FAIL: uv not found in PATH"
+            exit 1
+          fi
+          echo "PASS: uv found at $(which uv)"
+      - name: Assert uv runs successfully
+        run: |
+          UV_OUTPUT=$(uv --version)
+          echo "uv --version: $UV_OUTPUT"
+          if [ -z "$UV_OUTPUT" ]; then
+            echo "FAIL: uv --version returned empty output"
+            exit 1
+          fi
+          echo "PASS: uv runs successfully"

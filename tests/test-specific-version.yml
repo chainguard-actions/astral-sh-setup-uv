@@ -1,0 +1,35 @@
+name: Test specific version installation
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: setup-uv
+        uses: .
+        with:
+          version: "0.5.0"
+      - name: Assert uv-version output matches requested version
+        env:
+          UV_VERSION: ${{ steps.setup-uv.outputs.uv-version }}
+        run: |
+          echo "uv-version output: $UV_VERSION"
+          if [ -z "$UV_VERSION" ]; then
+            echo "FAIL: uv-version output is empty"
+            exit 1
+          fi
+          if [ "$UV_VERSION" != "0.5.0" ]; then
+            echo "FAIL: expected version '0.5.0' but got '$UV_VERSION'"
+            exit 1
+          fi
+          echo "PASS: uv-version matches requested version 0.5.0"
+      - name: Assert uv binary reports correct version
+        run: |
+          ACTUAL=$(uv --version)
+          echo "uv --version: $ACTUAL"
+          if ! echo "$ACTUAL" | grep -q "0.5.0"; then
+            echo "FAIL: expected uv version 0.5.0 in output, got: $ACTUAL"
+            exit 1
+          fi
+          echo "PASS: uv binary reports correct version"

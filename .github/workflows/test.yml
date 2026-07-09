@@ -1,0 +1,148 @@
+name: "test"
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "20"
+      - run: |
+          npm install
+      - run: |
+          npm run all
+      - name: Make sure no changes from linters are detected
+        run: |
+          git diff --exit-code
+  test-default-version:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, macos-14, selfhosted-ubuntu-arm64]
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - name: Install default version
+        uses: ./
+      - run: uv sync
+        working-directory: __tests__/fixtures/uv-project
+  test-specific-version:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, macos-14, selfhosted-ubuntu-arm64]
+        uv-version: ["latest", "0.3.0", "0.3.2", "0.3", "0.3.x", ">=0.3.0"]
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - name: Install version ${{ matrix.uv-version }}
+        uses: ./
+        with:
+          version: ${{ matrix.uv-version }}
+      - run: uv sync
+        working-directory: __tests__/fixtures/uv-project
+  test-semver-range:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, selfhosted-ubuntu-arm64]
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - name: Install version 0.3
+        id: setup-uv
+        uses: ./
+        with:
+          version: "0.3"
+      - name: Correct version gets installed
+        run: |
+          if [ "$UV_VERSION" != "0.3.5" ]; then
+            exit 1
+          fi
+        env:
+          UV_VERSION: ${{ steps.setup-uv.outputs.uv-version }}
+  test-checksum:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, selfhosted-ubuntu-arm64]
+        checksum:
+          ["4d9279ad5ca596b1e2d703901d508430eb07564dc4d8837de9e2fca9c90f8ecd"]
+        exclude:
+          - os: selfhosted-ubuntu-arm64
+            checksum: "4d9279ad5ca596b1e2d703901d508430eb07564dc4d8837de9e2fca9c90f8ecd"
+        include:
+          - os: selfhosted-ubuntu-arm64
+            checksum: "e11b01402ab645392c7ad6044db63d37e4fd1e745e015306993b07695ea5f9f8"
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - name: Checksum matches expected
+        uses: ./
+        with:
+          version: "0.3.2"
+          checksum: ${{ matrix.checksum }}
+  test-with-explicit-token:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - name: Install default version
+        uses: ./
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - run: uv sync
+        working-directory: __tests__/fixtures/uv-project
+  test-uvx:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - name: Install default version
+        uses: ./
+      - run: uvx ruff --version
+  test-tool-install:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os:
+          [
+            ubuntu-latest,
+            macos-latest,
+            macos-14,
+            windows-latest,
+            selfhosted-ubuntu-arm64,
+          ]
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - name: Install default version
+        uses: ./
+      - run: uv tool install ruff
+      - run: ruff --version
+
+  test-tilde-expansion-tool-dirs:
+    runs-on: selfhosted-ubuntu-arm64
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - name: Setup with cache
+        uses: ./
+        with:
+          tool-bin-dir: "~/tool-bin-dir"
+          tool-dir: "~/tool-dir"
+      - name: "Check if tool dirs are expanded"
+        run: |
+          if ! echo "$PATH" | grep -q "/home/ubuntu/tool-bin-dir"; then
+              echo "PATH does not contain /home/ubuntu/tool-bin-dir: $PATH"
+              exit 1
+          fi
+          if [ "$UV_TOOL_DIR" != "/home/ubuntu/tool-dir" ]; then
+              echo "UV_TOOL_DIR does not contain /home/ubuntu/tool-dir: $UV_TOOL_DIR"
+              exit 1
+          fi

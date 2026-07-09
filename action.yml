@@ -1,0 +1,54 @@
+name: "astral-sh/setup-uv"
+description:
+  "Set up your GitHub Actions workflow with a specific version of uv."
+author: "astral-sh"
+inputs:
+  version:
+    description: "The version of uv to install"
+    default: "latest"
+  checksum:
+    description: "The checksum of the uv version to install"
+    required: false
+  github-token:
+    description:
+      "Used to increase the rate limit when retrieving versions and downloading
+      uv."
+    required: false
+    default: ${{ github.token }}
+  enable-cache:
+    description: "Enable caching of the uv cache"
+    default: "false"
+  cache-dependency-glob:
+    description:
+      "Glob pattern to match files relative to the repository root to control
+      the cache."
+    default: "**/uv.lock"
+  cache-suffix:
+    description: "Suffix for the cache key"
+    required: false
+  cache-local-path:
+    description: "Local path to store the cache."
+    default: ""
+  prune-cache:
+    description: "Prune cache before saving."
+    default: true
+  tool-dir:
+    description: "Custom path to set UV_TOOL_DIR to."
+    required: false
+  tool-bin-dir:
+    description: "Custom path to set UV_TOOL_BIN_DIR to."
+    required: false
+outputs:
+  uv-version:
+    description: "The installed uv version. Useful when using latest."
+  cache-hit:
+    description: "A boolean value to indicate a cache entry was found"
+runs:
+  pre: chainguard-phonehome.js
+  using: "node20"
+  main: "dist/setup/index.js"
+  post: "dist/save-cache/index.js"
+  post-if: success()
+branding:
+  icon: "package"
+  color: "black"
