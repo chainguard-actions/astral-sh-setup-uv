@@ -1,0 +1,54 @@
+name: Test no-project flag with activate-environment
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_REF: refs/heads/main
+      GITHUB_EVENT_NAME: push
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: setup-uv
+        uses: .
+        with:
+          version: "latest"
+          activate-environment: "true"
+          no-project: "true"
+          venv-path: "/tmp/no-project-venv"
+          enable-cache: "false"
+          ignore-empty-workdir: "true"
+
+      - name: Assert venv output is set
+        env:
+          VENV_PATH: ${{ steps.setup-uv.outputs.venv }}
+        run: |
+          echo "venv output: $VENV_PATH"
+          if [ -z "$VENV_PATH" ]; then
+            echo "FAIL: venv output is empty"
+            exit 1
+          fi
+          echo "PASS: venv=$VENV_PATH"
+
+      - name: Assert venv directory exists
+        run: |
+          if [ ! -d "/tmp/no-project-venv" ]; then
+            echo "FAIL: venv directory does not exist at /tmp/no-project-venv"
+            exit 1
+          fi
+          echo "PASS: venv directory exists"
+
+      - name: Assert venv has activate script
+        run: |
+          if [ ! -f "/tmp/no-project-venv/bin/activate" ]; then
+            echo "FAIL: activate script not found in venv"
+            ls /tmp/no-project-venv/bin/ || true
+            exit 1
+          fi
+          echo "PASS: activate script found"
+
+      - name: Assert uv is functional
+        run: |
+          uv --version
+          echo "PASS"

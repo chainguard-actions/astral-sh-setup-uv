@@ -1,0 +1,61 @@
+name: Test activate-environment input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_REF: refs/heads/main
+      GITHUB_EVENT_NAME: push
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: setup-uv
+        uses: .
+        with:
+          version: "latest"
+          activate-environment: "true"
+          venv-path: "/tmp/test-venv"
+          enable-cache: "false"
+          ignore-empty-workdir: "true"
+          no-project: "true"
+
+      - name: Assert venv output is set
+        env:
+          VENV_PATH: ${{ steps.setup-uv.outputs.venv }}
+        run: |
+          echo "venv output: $VENV_PATH"
+          if [ -z "$VENV_PATH" ]; then
+            echo "FAIL: venv output is empty"
+            exit 1
+          fi
+          echo "PASS: venv=$VENV_PATH"
+
+      - name: Assert venv directory exists
+        run: |
+          echo "checking venv directory: /tmp/test-venv"
+          if [ ! -d "/tmp/test-venv" ]; then
+            echo "FAIL: venv directory does not exist at /tmp/test-venv"
+            exit 1
+          fi
+          echo "PASS: venv directory exists"
+
+      - name: Assert venv has activate script
+        run: |
+          if [ ! -f "/tmp/test-venv/bin/activate" ]; then
+            echo "FAIL: activate script not found in venv"
+            ls /tmp/test-venv/bin/ || true
+            exit 1
+          fi
+          echo "PASS: activate script found"
+
+      - name: Assert venv output matches expected path
+        env:
+          VENV_PATH: ${{ steps.setup-uv.outputs.venv }}
+        run: |
+          echo "venv output: $VENV_PATH"
+          if [ "$VENV_PATH" != "/tmp/test-venv" ]; then
+            echo "FAIL: expected venv path '/tmp/test-venv', got '$VENV_PATH'"
+            exit 1
+          fi
+          echo "PASS: venv path matches"

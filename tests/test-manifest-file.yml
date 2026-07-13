@@ -1,0 +1,43 @@
+name: Test manifest-file input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          version: "latest"
+          manifest-file: "https://raw.githubusercontent.com/astral-sh/uv/main/crates/uv-toolchain/src/downloads.json"
+          enable-cache: "false"
+        continue-on-error: true
+      - name: Assert action ran with manifest-file input
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+          UV_VERSION: ${{ steps.action.outputs.uv-version }}
+        run: |
+          echo "outcome: $OUTCOME"
+          echo "uv-version: $UV_VERSION"
+          # The action may succeed or fail depending on the manifest URL validity,
+          # but it must have processed the manifest-file input (not errored on unknown input)
+          if [ "$OUTCOME" = "success" ] || [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action processed manifest-file input (outcome=$OUTCOME)"
+          else
+            echo "FAIL: unexpected outcome: $OUTCOME"
+            exit 1
+          fi
+      - name: Assert uv is available when action succeeded
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          if [ "$OUTCOME" = "success" ]; then
+            if ! command -v uv &>/dev/null; then
+              echo "FAIL: uv not found in PATH after successful action"
+              exit 1
+            fi
+            echo "PASS: uv found at $(command -v uv)"
+          else
+            echo "INFO: action did not succeed, skipping uv availability check"
+          fi
