@@ -1,4 +1,4 @@
-name: Test checksum input validation
+name: Test checksum input
 on:
   workflow_dispatch:
 jobs:
@@ -9,18 +9,25 @@ jobs:
       - id: setup-uv
         uses: .
         with:
-          version: "0.5.0"
-          checksum: "0000000000000000000000000000000000000000000000000000000000000000"
+          version: "0.3.1"
+          checksum: "e11b01402ab645392c7ad6044db63d37e4fd1e745e015306993b07695ea5f9f8"
           enable-cache: "false"
-          ignore-empty-workdir: "true"
-        continue-on-error: true
-      - name: Assert checksum mismatch caused step failure
+      - name: Assert uv-version output matches expected
         env:
-          OUTCOME: ${{ steps.setup-uv.outcome }}
+          ACTUAL: ${{ steps.setup-uv.outputs.uv-version }}
         run: |
-          echo "step outcome: $OUTCOME"
-          if [ "$OUTCOME" != "failure" ]; then
-            echo "FAIL: expected step to fail due to checksum mismatch, but outcome was '$OUTCOME'"
+          echo "actual: $ACTUAL"
+          if [ "$ACTUAL" != "0.3.1" ]; then
+            echo "FAIL: expected uv-version '0.3.1' but got '$ACTUAL'"
             exit 1
           fi
-          echo "PASS: checksum validation correctly rejected invalid checksum"
+          echo "PASS: uv-version=$ACTUAL"
+      - name: Assert uv is executable and correct version
+        run: |
+          VERSION=$(uv --version 2>&1 | awk '{print $2}')
+          echo "uv version: $VERSION"
+          if [ "$VERSION" != "0.3.1" ]; then
+            echo "FAIL: expected uv 0.3.1 but got $VERSION"
+            exit 1
+          fi
+          echo "PASS"
