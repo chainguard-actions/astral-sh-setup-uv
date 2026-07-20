@@ -16,7 +16,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: "20"
@@ -33,7 +33,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest, macos-14, selfhosted-ubuntu-arm64]
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Install default version
         uses: ./
       - run: uv sync
@@ -45,7 +45,7 @@ jobs:
         os: [ubuntu-latest, macos-latest, macos-14, selfhosted-ubuntu-arm64]
         uv-version: ["latest", "0.3.0", "0.3.2", "0.3", "0.3.x", ">=0.3.0"]
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Install version ${{ matrix.uv-version }}
         uses: ./
         with:
@@ -58,7 +58,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, selfhosted-ubuntu-arm64]
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Install version 0.3
         id: setup-uv
         uses: ./
@@ -85,7 +85,7 @@ jobs:
           - os: selfhosted-ubuntu-arm64
             checksum: "e11b01402ab645392c7ad6044db63d37e4fd1e745e015306993b07695ea5f9f8"
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Checksum matches expected
         uses: ./
         with:
@@ -94,7 +94,7 @@ jobs:
   test-with-explicit-token:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Install default version
         uses: ./
         with:
@@ -104,7 +104,7 @@ jobs:
   test-uvx:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Install default version
         uses: ./
       - run: uvx ruff --version
@@ -121,7 +121,7 @@ jobs:
             selfhosted-ubuntu-arm64,
           ]
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Install default version
         uses: ./
       - run: uv tool install ruff
@@ -130,7 +130,7 @@ jobs:
   test-tilde-expansion-tool-dirs:
     runs-on: selfhosted-ubuntu-arm64
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Setup with cache
         uses: ./
         with:

@@ -19,7 +19,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest, macos-14]
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Setup with cache
         uses: ./
         with:
@@ -34,7 +34,7 @@ jobs:
         os: [ubuntu-latest, macos-latest, macos-14]
     needs: test-setup-cache
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Restore with cache
         id: restore
         uses: ./
@@ -54,7 +54,7 @@ jobs:
   test-setup-cache-dependency-glob:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Setup with cache
         uses: ./
         with:
@@ -69,7 +69,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: test-setup-cache-dependency-glob
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Change pyproject.toml
         run: |
           echo '[tool.uv]' >> __tests__/fixtures/uv-project/pyproject.toml
@@ -94,7 +94,7 @@ jobs:
   test-setup-cache-local:
     runs-on: selfhosted-ubuntu-arm64
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Setup with cache
         uses: ./
         with:
@@ -107,7 +107,7 @@ jobs:
     runs-on: selfhosted-ubuntu-arm64
     needs: test-setup-cache-local
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Restore with cache
         id: restore
         uses: ./
@@ -139,7 +139,7 @@ jobs:
     needs: prepare-tilde-expansion-tests
     runs-on: selfhosted-ubuntu-arm64
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Setup with cache
         uses: ./
         with:
@@ -150,7 +150,7 @@ jobs:
     needs: prepare-tilde-expansion-tests
     runs-on: selfhosted-ubuntu-arm64
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Setup with cache
         uses: ./
         with:

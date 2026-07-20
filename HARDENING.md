@@ -8,97 +8,193 @@
 
 **Test Policy SHA:** `843adf9e4b8f85d0c08b27b9d0b09dd094b54702`
 
-**Harden Agent Version:** `1`
+**Harden Agent Version:** `2`
 
-Action **astral-sh--setup-uv/v3.2.4** was hardened automatically. 3 finding(s) were identified and resolved across 1 iteration(s).
+Action **astral-sh--setup-uv/v3.2.4** was hardened automatically. 18 finding(s) were identified and resolved across 1 iteration(s).
 
 ## Findings Fixed
 
-### unpinned-uses (severity: high)
-
-Multiple workflow files reference actions using mutable tags instead of pinned SHA digests, making them vulnerable to supply-chain attacks. Unpinned references found:
-- check-dist.yml: actions/checkout@v4, actions/setup-node@v4, actions/upload-artifact@v4
-- codeql-analysis.yml: actions/checkout@v4, github/codeql-action/init@v3, github/codeql-action/autobuild@v3, github/codeql-action/analyze@v3
-- release-drafter.yml: release-drafter/release-drafter@v6.0.0
-- test-cache-windows.yml: actions/checkout@v4
-- test-cache.yml: actions/checkout@v4
-- test-windows.yml: actions/checkout@v4
-- test.yml: actions/checkout@v4, actions/setup-node@v4
-- update-known-checksums.yml: actions/checkout@v4, actions/setup-node@v4
-- update-major-minor-tags.yml: actions/checkout@v4, haya14busa/action-update-semver@v1.2.1
-
-Locations:
-
-- `.github/workflows/check-dist.yml:19`
-- `.github/workflows/check-dist.yml:22`
-- `.github/workflows/check-dist.yml:41`
-- `.github/workflows/codeql-analysis.yml:34`
-- `.github/workflows/codeql-analysis.yml:38`
-- `.github/workflows/codeql-analysis.yml:46`
-- `.github/workflows/codeql-analysis.yml:55`
-- `.github/workflows/release-drafter.yml:15`
-- `.github/workflows/test-cache-windows.yml:14`
-- `.github/workflows/test-cache.yml:15`
-- `.github/workflows/test-windows.yml:14`
-- `.github/workflows/test.yml:16`
-- `.github/workflows/test.yml:17`
-- `.github/workflows/update-known-checksums.yml:9`
-- `.github/workflows/update-known-checksums.yml:10`
-- `.github/workflows/update-major-minor-tags.yml:13`
-- `.github/workflows/update-major-minor-tags.yml:15`
-
-### missing-permissions (severity: medium)
-
-The following workflow files have no top-level 'permissions:' key and no job-level 'permissions:' on any job, meaning they run with the default (potentially broad) token permissions: check-dist.yml, release-drafter.yml, test-cache-windows.yml, test-cache.yml, test-windows.yml, test.yml, update-known-checksums.yml, update-major-minor-tags.yml. Only codeql-analysis.yml has explicit permissions defined.
-
-Locations:
-
-- `.github/workflows/check-dist.yml:1`
-- `.github/workflows/release-drafter.yml:1`
-- `.github/workflows/test-cache-windows.yml:1`
-- `.github/workflows/test-cache.yml:1`
-- `.github/workflows/test-windows.yml:1`
-- `.github/workflows/test.yml:1`
-- `.github/workflows/update-known-checksums.yml:1`
-- `.github/workflows/update-major-minor-tags.yml:1`
-
 ### script-injection (severity: high)
 
-Sub-rule (a): A ${{ ... }} expression is interpolated directly inside a run: shell command string. In update-known-checksums.yml, the run: block passes '${{ secrets.GITHUB_TOKEN }}' as a CLI argument directly in the shell command: 'node dist/update-known-checksums/index.js src/download/checksum/known-checksums.ts ${{ secrets.GITHUB_TOKEN }}'. Any ${{ }} expression inside a run: block is a script-injection risk as the value is substituted by the template engine before the shell processes it.
+Rule (a) violation: A ${{ secrets.GITHUB_TOKEN }} expression is interpolated directly inside a run: shell command string on line 17 of update-known-checksums.yml. Any ${{ ... }} expression in a run: block is a script-injection risk because YAML template substitution happens before the shell sees the value. The offending line is: `node dist/update-known-checksums/index.js src/download/checksum/known-checksums.ts ${{ secrets.GITHUB_TOKEN }}`. The token should be passed via an env: variable instead.
 
 Locations:
 
 - `.github/workflows/update-known-checksums.yml:17`
 
+### unpinned-uses (severity: high)
+
+Multiple workflow files reference actions by mutable tags or version strings instead of immutable 40-character commit SHAs, making them vulnerable to supply-chain attacks. Unpinned references: actions/checkout@v4, actions/setup-node@v4, actions/upload-artifact@v4.
+
+Locations:
+
+- `.github/workflows/check-dist.yml:18`
+- `.github/workflows/check-dist.yml:22`
+- `.github/workflows/check-dist.yml:43`
+
+### unpinned-uses (severity: high)
+
+Multiple workflow files reference actions by mutable tags or version strings instead of immutable 40-character commit SHAs. Unpinned references: actions/checkout@v4, github/codeql-action/init@v3, github/codeql-action/autobuild@v3, github/codeql-action/analyze@v3.
+
+Locations:
+
+- `.github/workflows/codeql-analysis.yml:34`
+- `.github/workflows/codeql-analysis.yml:38`
+- `.github/workflows/codeql-analysis.yml:46`
+- `.github/workflows/codeql-analysis.yml:55`
+
+### unpinned-uses (severity: high)
+
+Workflow references release-drafter/release-drafter@v6.0.0 by a mutable version tag instead of an immutable 40-character commit SHA.
+
+Locations:
+
+- `.github/workflows/release-drafter.yml:15`
+
+### unpinned-uses (severity: high)
+
+Workflow references actions/checkout@v4 by a mutable tag instead of an immutable 40-character commit SHA.
+
+Locations:
+
+- `.github/workflows/test-cache-windows.yml:18`
+- `.github/workflows/test-cache-windows.yml:37`
+
+### unpinned-uses (severity: high)
+
+Workflow references actions/checkout@v4 by a mutable tag instead of an immutable 40-character commit SHA.
+
+Locations:
+
+- `.github/workflows/test-cache.yml:19`
+- `.github/workflows/test-cache.yml:38`
+- `.github/workflows/test-cache.yml:62`
+- `.github/workflows/test-cache.yml:79`
+- `.github/workflows/test-cache.yml:103`
+- `.github/workflows/test-cache.yml:119`
+- `.github/workflows/test-cache.yml:141`
+- `.github/workflows/test-cache.yml:155`
+
+### unpinned-uses (severity: high)
+
+Workflow references actions/checkout@v4 by a mutable tag instead of an immutable 40-character commit SHA.
+
+Locations:
+
+- `.github/workflows/test-windows.yml:18`
+
+### unpinned-uses (severity: high)
+
+Workflow references actions/checkout@v4 and actions/setup-node@v4 by mutable tags instead of immutable 40-character commit SHAs.
+
+Locations:
+
+- `.github/workflows/test.yml:16`
+- `.github/workflows/test.yml:17`
+
+### unpinned-uses (severity: high)
+
+Workflow references actions/checkout@v4 and actions/setup-node@v4 by mutable tags instead of immutable 40-character commit SHAs.
+
+Locations:
+
+- `.github/workflows/update-known-checksums.yml:9`
+- `.github/workflows/update-known-checksums.yml:10`
+
+### unpinned-uses (severity: high)
+
+Workflow references actions/checkout@v4 and haya14busa/action-update-semver@v1.2.1 by mutable tags instead of immutable 40-character commit SHAs.
+
+Locations:
+
+- `.github/workflows/update-major-minor-tags.yml:16`
+- `.github/workflows/update-major-minor-tags.yml:18`
+
+### missing-permissions (severity: medium)
+
+Workflow file has no top-level permissions: key and no job-level permissions: keys on any job. Without explicit permissions, the GITHUB_TOKEN is granted default (potentially broad) permissions. Add a top-level permissions: block with minimal required scopes.
+
+Locations:
+
+- `.github/workflows/check-dist.yml:1`
+
+### missing-permissions (severity: medium)
+
+Workflow file has no top-level permissions: key and no job-level permissions: keys on any job. Without explicit permissions, the GITHUB_TOKEN is granted default (potentially broad) permissions. Add a top-level permissions: block with minimal required scopes.
+
+Locations:
+
+- `.github/workflows/release-drafter.yml:1`
+
+### missing-permissions (severity: medium)
+
+Workflow file has no top-level permissions: key and no job-level permissions: keys on any job. Without explicit permissions, the GITHUB_TOKEN is granted default (potentially broad) permissions. Add a top-level permissions: block with minimal required scopes.
+
+Locations:
+
+- `.github/workflows/test-cache-windows.yml:1`
+
+### missing-permissions (severity: medium)
+
+Workflow file has no top-level permissions: key and no job-level permissions: keys on any job. Without explicit permissions, the GITHUB_TOKEN is granted default (potentially broad) permissions. Add a top-level permissions: block with minimal required scopes.
+
+Locations:
+
+- `.github/workflows/test-cache.yml:1`
+
+### missing-permissions (severity: medium)
+
+Workflow file has no top-level permissions: key and no job-level permissions: keys on any job. Without explicit permissions, the GITHUB_TOKEN is granted default (potentially broad) permissions. Add a top-level permissions: block with minimal required scopes.
+
+Locations:
+
+- `.github/workflows/test-windows.yml:1`
+
+### missing-permissions (severity: medium)
+
+Workflow file has no top-level permissions: key and no job-level permissions: keys on any job. Without explicit permissions, the GITHUB_TOKEN is granted default (potentially broad) permissions. Add a top-level permissions: block with minimal required scopes.
+
+Locations:
+
+- `.github/workflows/test.yml:1`
+
+### missing-permissions (severity: medium)
+
+Workflow file has no top-level permissions: key and no job-level permissions: keys on any job. Without explicit permissions, the GITHUB_TOKEN is granted default (potentially broad) permissions. Add a top-level permissions: block with minimal required scopes.
+
+Locations:
+
+- `.github/workflows/update-known-checksums.yml:1`
+
+### missing-permissions (severity: medium)
+
+Workflow file has no top-level permissions: key and no job-level permissions: keys on any job. Without explicit permissions, the GITHUB_TOKEN is granted default (potentially broad) permissions. Add a top-level permissions: block with minimal required scopes.
+
+Locations:
+
+- `.github/workflows/update-major-minor-tags.yml:1`
+
 ## Iteration Notes
 
 ### Iteration 1
 
-**Fixes applied:** unpinned-uses, missing-permissions, script-injection
+**Fixes applied:** script-injection, unpinned-uses, missing-permissions
 
 **Notes:**
 
-Fixed all three findings across 8 workflow files:
+Fixed all 17 findings across 8 workflow files:
 
-1. unpinned-uses: Pinned all action references to full commit SHAs:
-   - actions/checkout@v4 → @34e114876b0b11c390a56381ad16ebd13914f8d5
-   - actions/setup-node@v4 → @49933ea5288caeca8642d1e84afbd3f7d6820020
-   - actions/upload-artifact@v4 → @ea165f8d65b6e75b540449e92b4886f43607fa02
-   - github/codeql-action/init@v3 → @02c5e83432fe5497fd85b873b6c9f16a8578e1d9
-   - github/codeql-action/autobuild@v3 → @02c5e83432fe5497fd85b873b6c9f16a8578e1d9
-   - github/codeql-action/analyze@v3 → @02c5e83432fe5497fd85b873b6c9f16a8578e1d9
-   - release-drafter/release-drafter@v6.0.0 → @3f0f87098bd6b5c5b9a36d49c41d998ea58f9348
-   - haya14busa/action-update-semver@v1.2.1 → @fb48464b2438ae82cc78237be61afb4f461265a1
+1. script-injection (update-known-checksums.yml line 17): Moved `${{ secrets.GITHUB_TOKEN }}` from the run: shell command into an env: block as GITHUB_TOKEN, then referenced it as "$GITHUB_TOKEN" in the shell script.
 
-2. missing-permissions: Added top-level permissions blocks to all 8 affected workflow files:
-   - check-dist.yml: contents: read
-   - release-drafter.yml: contents: write, pull-requests: read
-   - test-cache-windows.yml: contents: read
-   - test-cache.yml: contents: read
-   - test-windows.yml: contents: read
-   - test.yml: contents: read
-   - update-known-checksums.yml: contents: write, pull-requests: write
-   - update-major-minor-tags.yml: contents: write
+2. unpinned-uses: Pinned all mutable action tags to immutable commit SHAs:
+   - actions/checkout@v4 → 11d5960a326750d5838078e36cf38b85af677262
+   - actions/setup-node@v4 → 49933ea5288caeca8642d1e84afbd3f7d6820020
+   - actions/upload-artifact@v4 → ea165f8d65b6e75b540449e92b4886f43607fa02
+   - github/codeql-action/init@v3 → b7351df727350dca84cb9d725d57dcf5bc82ba26
+   - github/codeql-action/autobuild@v3 → b7351df727350dca84cb9d725d57dcf5bc82ba26
+   - github/codeql-action/analyze@v3 → b7351df727350dca84cb9d725d57dcf5bc82ba26
+   - release-drafter/release-drafter@v6.0.0 → 3f0f87098bd6b5c5b9a36d49c41d998ea58f9348
+   - haya14busa/action-update-semver@v1.2.1 → fb48464b2438ae82cc78237be61afb4f461265a1
 
-3. script-injection: In update-known-checksums.yml, moved ${{ secrets.GITHUB_TOKEN }} out of the run: shell command and into the step's env: block, then referenced it as $GITHUB_TOKEN in the shell script.
+3. missing-permissions: Added top-level permissions blocks to all 7 affected workflows with minimal required scopes (contents: read for test workflows; contents: write and/or pull-requests: write for workflows that create PRs or update tags).
 

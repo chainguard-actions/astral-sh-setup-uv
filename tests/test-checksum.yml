@@ -6,23 +6,35 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - id: action
+      - name: Fetch real checksum for uv 0.5.0
+        id: get-checksum
+        run: |
+          CHECKSUM=$(curl -sfL \
+            "https://github.com/astral-sh/uv/releases/download/0.5.0/uv-x86_64-unknown-linux-gnu.tar.gz.sha256" \
+            | awk '{print $1}')
+          echo "checksum=$CHECKSUM"
+          echo "checksum=$CHECKSUM" >> "$GITHUB_OUTPUT"
+      - id: setup-uv
         uses: .
         with:
-          version: "0.5.1"
-          # Real SHA256 checksum for uv 0.5.1 Linux x86_64 installer
-          checksum: "sha256:c9a8b2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1"
-        continue-on-error: true
-      - name: Assert checksum input was processed
+          version: "0.5.0"
+          checksum: ${{ steps.get-checksum.outputs.checksum }}
+      - name: Assert uv-version output matches requested version
         env:
-          OUTCOME: ${{ steps.action.outcome }}
+          UV_VERSION: ${{ steps.setup-uv.outputs.uv-version }}
         run: |
-          echo "outcome: $OUTCOME"
-          # The action either succeeds (if checksum matches) or fails with a
-          # checksum mismatch — either way the 'checksum' input was accepted
-          # and processed by the action. We verify the step ran.
-          if [ -z "$OUTCOME" ]; then
-            echo "FAIL: step outcome not set"
+          echo "uv-version output: $UV_VERSION"
+          if [ "$UV_VERSION" != "0.5.0" ]; then
+            echo "FAIL: expected uv-version '0.5.0' but got '$UV_VERSION'"
             exit 1
           fi
-          echo "PASS: checksum input was accepted and processed (outcome=$OUTCOME)"
+          echo "PASS: uv-version output is correct"
+      - name: Assert uv binary is installed and correct version
+        run: |
+          ACTUAL="$(uv --version | awk '{print $2}')"
+          echo "uv --version: $ACTUAL"
+          if [ "$ACTUAL" != "0.5.0" ]; then
+            echo "FAIL: expected uv binary version '0.5.0' but got '$ACTUAL'"
+            exit 1
+          fi
+          echo "PASS: uv binary version is correct"
