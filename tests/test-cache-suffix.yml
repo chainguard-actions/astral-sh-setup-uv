@@ -1,0 +1,46 @@
+name: Test cache-suffix input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          version: "0.5.0"
+          cache-suffix: "-my-suffix"
+          enable-cache: "true"
+      - name: Assert uv-version output is set
+        env:
+          ACTUAL: ${{ steps.action.outputs.uv-version }}
+        run: |
+          echo "actual uv-version: $ACTUAL"
+          if [ -z "$ACTUAL" ]; then
+            echo "FAIL: uv-version output is empty"
+            exit 1
+          fi
+          echo "PASS: uv-version=$ACTUAL"
+      - name: Assert cache-key contains suffix
+        env:
+          CACHE_KEY: ${{ steps.action.outputs.cache-key }}
+        run: |
+          echo "cache-key: $CACHE_KEY"
+          if [ -z "$CACHE_KEY" ]; then
+            echo "INFO: cache-key is empty (may be expected if nothing to cache)"
+          else
+            if echo "$CACHE_KEY" | grep -q -- "-my-suffix"; then
+              echo "PASS: cache-key contains the expected suffix"
+            else
+              echo "FAIL: cache-key '$CACHE_KEY' does not contain '-my-suffix'"
+              exit 1
+            fi
+          fi
+      - name: Assert uv is on PATH
+        run: |
+          if ! command -v uv >/dev/null 2>&1; then
+            echo "FAIL: uv not found on PATH"
+            exit 1
+          fi
+          echo "PASS: uv found at $(command -v uv)"

@@ -1,0 +1,42 @@
+name: Test tool-dir and tool-bin-dir inputs
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: setup-uv
+        uses: .
+        with:
+          version: "latest"
+          enable-cache: "false"
+          tool-dir: "/tmp/uv-tools"
+          tool-bin-dir: "/tmp/uv-tool-bin"
+
+      - name: Assert UV_TOOL_DIR is set correctly
+        run: |
+          echo "UV_TOOL_DIR: $UV_TOOL_DIR"
+          if [ "$UV_TOOL_DIR" != "/tmp/uv-tools" ]; then
+            echo "FAIL: expected UV_TOOL_DIR='/tmp/uv-tools' but got '$UV_TOOL_DIR'"
+            exit 1
+          fi
+          echo "PASS: UV_TOOL_DIR=$UV_TOOL_DIR"
+
+      - name: Assert UV_TOOL_BIN_DIR is set correctly
+        run: |
+          echo "UV_TOOL_BIN_DIR: $UV_TOOL_BIN_DIR"
+          if [ "$UV_TOOL_BIN_DIR" != "/tmp/uv-tool-bin" ]; then
+            echo "FAIL: expected UV_TOOL_BIN_DIR='/tmp/uv-tool-bin' but got '$UV_TOOL_BIN_DIR'"
+            exit 1
+          fi
+          echo "PASS: UV_TOOL_BIN_DIR=$UV_TOOL_BIN_DIR"
+
+      - name: Assert uv tool install uses custom dirs
+        run: |
+          uv tool install cowsay
+          if [ ! -d "/tmp/uv-tool-bin" ]; then
+            echo "FAIL: UV_TOOL_BIN_DIR /tmp/uv-tool-bin was not created"
+            exit 1
+          fi
+          echo "PASS: tool bin dir exists"
