@@ -19,6 +19,7 @@ Hardened by [Chainguard](https://www.chainguard.dev) from the upstream action at
 | v8.3.0 | [`v8.3.0`](https://github.com/chainguard-actions/astral-sh-setup-uv/tree/v8.3.0) | [`d31148d`](https://github.com/astral-sh/setup-uv/commit/d31148d669074a8d0a63714ba94f3201e7020bc3) |
 | v8.3.1 | [`v8.3.1`](https://github.com/chainguard-actions/astral-sh-setup-uv/tree/v8.3.1) | [`f98e069`](https://github.com/astral-sh/setup-uv/commit/f98e06938123ccabd21905ea5d0069192241f9f1) |
 | v8.3.2 | [`v8.3.2`](https://github.com/chainguard-actions/astral-sh-setup-uv/tree/v8.3.2) | [`11f9893`](https://github.com/astral-sh/setup-uv/commit/11f9893b081a58869d3b5fccaea48c9e9e46f990) |
+| v9.0.0 | [`v9.0.0`](https://github.com/chainguard-actions/astral-sh-setup-uv/tree/v9.0.0) | [`c771a70`](https://github.com/astral-sh/setup-uv/commit/c771a70e6277c0a99b617c7a806ffedaca235ff9) |
 
 ## Privacy
 
