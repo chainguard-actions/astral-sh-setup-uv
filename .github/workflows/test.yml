@@ -1075,7 +1075,7 @@ jobs:
       - name: Check Python dir is expected dir
         run: |
           if [ "$UV_PYTHON_INSTALL_DIR" != "$EXPECTED_PYTHON_DIR" ]; then
-            echo "Wrong UV_PYTHON_INSTALL_DIR: $UV_PYTHON_INSTALL_DIR"
+            echo "Wrong UV_PYTHON_INSTALL_DIR: UV_PYTHON_INSTALL_DIR"
             exit 1
           fi
         shell: bash
@@ -1159,10 +1159,10 @@ jobs:
     if: always()
     steps:
       - name: All tests passed
-        env:
-          ALL_PASSED: ${{ !(contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')) }}
-          EXIT_CODE: ${{ (contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')) && 1 || 0 }}
         run: |
           echo "All jobs passed: $ALL_PASSED"
           # shellcheck disable=SC2242
           exit "$EXIT_CODE"
+        env:
+          ALL_PASSED: ${{ !(contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')) }}
+          EXIT_CODE: ${{ (contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')) && 1 || 0 }}

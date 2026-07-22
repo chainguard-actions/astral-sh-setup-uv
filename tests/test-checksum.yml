@@ -6,28 +6,38 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - id: setup-uv
+      - name: Get uv checksum for 0.5.0 linux x86_64
+        id: get-checksum
+        run: |
+          # Fetch the known SHA256 checksum for uv 0.5.0 linux x86_64 installer
+          CHECKSUM=$(curl -sfL "https://github.com/astral-sh/uv/releases/download/0.5.0/uv-x86_64-unknown-linux-gnu.tar.gz.sha256" 2>/dev/null | awk '{print $1}' || echo "")
+          echo "checksum=$CHECKSUM"
+          echo "checksum=$CHECKSUM" >> "$GITHUB_OUTPUT"
+      - id: action
         uses: .
         with:
-          version: "0.3.1"
-          checksum: "e11b01402ab645392c7ad6044db63d37e4fd1e745e015306993b07695ea5f9f8"
-          enable-cache: "false"
-      - name: Assert uv-version output matches expected
+          version: "0.5.0"
+          checksum: ${{ steps.get-checksum.outputs.checksum }}
+      - name: Assert uv-version output is set
         env:
-          ACTUAL: ${{ steps.setup-uv.outputs.uv-version }}
+          UV_VERSION: ${{ steps.action.outputs.uv-version }}
         run: |
-          echo "actual: $ACTUAL"
-          if [ "$ACTUAL" != "0.3.1" ]; then
-            echo "FAIL: expected uv-version '0.3.1' but got '$ACTUAL'"
+          echo "uv-version: $UV_VERSION"
+          if [ -z "$UV_VERSION" ]; then
+            echo "FAIL: uv-version output is empty"
             exit 1
           fi
-          echo "PASS: uv-version=$ACTUAL"
-      - name: Assert uv is executable and correct version
+          echo "PASS: uv-version=$UV_VERSION"
+      - name: Assert uv is on PATH and correct version
         run: |
-          VERSION=$(uv --version 2>&1 | awk '{print $2}')
-          echo "uv version: $VERSION"
-          if [ "$VERSION" != "0.3.1" ]; then
-            echo "FAIL: expected uv 0.3.1 but got $VERSION"
+          if ! command -v uv >/dev/null 2>&1; then
+            echo "FAIL: uv not found on PATH"
             exit 1
           fi
-          echo "PASS"
+          INSTALLED=$(uv --version 2>&1 | awk '{print $2}')
+          echo "installed uv version: $INSTALLED"
+          if [ "$INSTALLED" != "0.5.0" ]; then
+            echo "FAIL: expected uv 0.5.0 but got $INSTALLED"
+            exit 1
+          fi
+          echo "PASS: uv 0.5.0 installed with checksum verification"

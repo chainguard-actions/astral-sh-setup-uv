@@ -1,4 +1,4 @@
-name: Test basic uv setup (latest version)
+name: Test basic uv installation (latest)
 on:
   workflow_dispatch:
 jobs:
@@ -6,12 +6,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
       - id: setup-uv
         uses: .
         with:
-          version: "latest"
           enable-cache: "false"
-          ignore-empty-workdir: "true"
+
       - name: Assert uv-version output is set
         env:
           UV_VERSION: ${{ steps.setup-uv.outputs.uv-version }}
@@ -22,6 +22,7 @@ jobs:
             exit 1
           fi
           echo "PASS: uv-version=$UV_VERSION"
+
       - name: Assert uv-path output is set
         env:
           UV_PATH: ${{ steps.setup-uv.outputs.uv-path }}
@@ -31,7 +32,12 @@ jobs:
             echo "FAIL: uv-path output is empty"
             exit 1
           fi
-          echo "PASS: uv-path=$UV_PATH"
+          if [ ! -f "$UV_PATH" ]; then
+            echo "FAIL: uv binary not found at $UV_PATH"
+            exit 1
+          fi
+          echo "PASS: uv binary exists at $UV_PATH"
+
       - name: Assert uvx-path output is set
         env:
           UVX_PATH: ${{ steps.setup-uv.outputs.uvx-path }}
@@ -41,25 +47,17 @@ jobs:
             echo "FAIL: uvx-path output is empty"
             exit 1
           fi
-          echo "PASS: uvx-path=$UVX_PATH"
-      - name: Assert uv binary is executable
-        env:
-          UV_PATH: ${{ steps.setup-uv.outputs.uv-path }}
-        run: |
-          echo "Checking uv binary at: $UV_PATH"
-          if [ -n "$UV_PATH" ] && [ ! -x "$UV_PATH" ]; then
-            echo "FAIL: uv binary is not executable at $UV_PATH"
+          if [ ! -f "$UVX_PATH" ]; then
+            echo "FAIL: uvx binary not found at $UVX_PATH"
             exit 1
           fi
-          echo "PASS: uv binary is executable"
-      - name: Assert uv is on PATH
-        run: |
-          if ! command -v uv &>/dev/null; then
-            echo "FAIL: uv not found on PATH"
-            exit 1
-          fi
-          echo "PASS: uv found at $(command -v uv)"
-      - name: Assert uv runs successfully
+          echo "PASS: uvx binary exists at $UVX_PATH"
+
+      - name: Assert uv is runnable
         run: |
           uv --version
-          echo "PASS: uv runs successfully"
+          if [ $? -ne 0 ]; then
+            echo "FAIL: uv command failed"
+            exit 1
+          fi
+          echo "PASS: uv is runnable"

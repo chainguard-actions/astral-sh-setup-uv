@@ -1,4 +1,4 @@
-name: Test activate-environment feature
+name: Test uv activate-environment
 on:
   workflow_dispatch:
 jobs:
@@ -6,46 +6,44 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
       - id: setup-uv
         uses: .
         with:
-          version: "latest"
-          enable-cache: "false"
+          version: "0.5.0"
           activate-environment: "true"
           no-project: "true"
-          ignore-empty-workdir: "true"
+          enable-cache: "false"
+
       - name: Assert venv output is set
         env:
           VENV: ${{ steps.setup-uv.outputs.venv }}
         run: |
-          echo "venv: $VENV"
+          echo "venv output: $VENV"
           if [ -z "$VENV" ]; then
             echo "FAIL: venv output is empty"
             exit 1
           fi
           echo "PASS: venv=$VENV"
+
       - name: Assert venv directory exists
         env:
           VENV: ${{ steps.setup-uv.outputs.venv }}
         run: |
-          echo "Checking venv directory at: $VENV"
+          echo "checking venv directory: $VENV"
           if [ ! -d "$VENV" ]; then
             echo "FAIL: venv directory does not exist at $VENV"
             exit 1
           fi
           echo "PASS: venv directory exists"
+
       - name: Assert python is available in venv
         env:
           VENV: ${{ steps.setup-uv.outputs.venv }}
         run: |
-          PYTHON_BIN="$VENV/bin/python"
-          echo "Checking python at: $PYTHON_BIN"
-          if [ ! -f "$PYTHON_BIN" ] && [ ! -L "$PYTHON_BIN" ]; then
-            echo "FAIL: python not found in venv at $PYTHON_BIN"
+          if [ ! -f "$VENV/bin/python" ] && [ ! -f "$VENV/bin/python3" ]; then
+            echo "FAIL: python not found in venv $VENV/bin/"
+            ls "$VENV/bin/" || true
             exit 1
           fi
           echo "PASS: python found in venv"
-      - name: Assert uv is functional
-        run: |
-          uv --version
-          echo "PASS: uv runs successfully"

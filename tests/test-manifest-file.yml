@@ -6,26 +6,35 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - id: setup-uv
+      - id: action
         uses: .
         with:
           version: "0.5.0"
-          manifest-file: "https://raw.githubusercontent.com/astral-sh/versions/refs/heads/main/uv.json"
-          enable-cache: "false"
+          manifest-file: "https://raw.githubusercontent.com/astral-sh/uv/main/crates/uv-toolchain/src/downloads.json"
       - name: Assert uv-version output is set
         env:
-          ACTUAL: ${{ steps.setup-uv.outputs.uv-version }}
+          UV_VERSION: ${{ steps.action.outputs.uv-version }}
         run: |
-          echo "actual: $ACTUAL"
-          if [ -z "$ACTUAL" ]; then
+          echo "uv-version: $UV_VERSION"
+          if [ -z "$UV_VERSION" ]; then
             echo "FAIL: uv-version output is empty"
             exit 1
           fi
-          echo "PASS: uv-version=$ACTUAL"
-      - name: Assert uv is executable
+          echo "PASS: uv-version=$UV_VERSION"
+      - name: Assert uv is on PATH
         run: |
-          if ! uv --version; then
-            echo "FAIL: uv is not executable"
+          if ! command -v uv >/dev/null 2>&1; then
+            echo "FAIL: uv not found on PATH"
             exit 1
           fi
-          echo "PASS"
+          echo "PASS: uv found at $(command -v uv)"
+      - name: Assert uv-path output is set
+        env:
+          UV_PATH: ${{ steps.action.outputs.uv-path }}
+        run: |
+          echo "uv-path: $UV_PATH"
+          if [ -z "$UV_PATH" ]; then
+            echo "FAIL: uv-path output is empty"
+            exit 1
+          fi
+          echo "PASS: uv-path=$UV_PATH"

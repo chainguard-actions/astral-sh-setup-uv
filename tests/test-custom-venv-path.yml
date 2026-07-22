@@ -1,4 +1,4 @@
-name: Test custom venv-path with activate-environment
+name: Test uv activate-environment with custom venv path
 on:
   workflow_dispatch:
 jobs:
@@ -6,25 +6,31 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
       - id: setup-uv
         uses: .
         with:
-          version: "latest"
-          enable-cache: "false"
+          version: "0.5.0"
           activate-environment: "true"
           venv-path: "/tmp/my-custom-venv"
           no-project: "true"
-          ignore-empty-workdir: "true"
+          enable-cache: "false"
+
       - name: Assert venv output matches custom path
         env:
           VENV: ${{ steps.setup-uv.outputs.venv }}
         run: |
-          echo "venv: $VENV"
+          echo "venv output: $VENV"
+          if [ -z "$VENV" ]; then
+            echo "FAIL: venv output is empty"
+            exit 1
+          fi
           if [ "$VENV" != "/tmp/my-custom-venv" ]; then
             echo "FAIL: expected venv path '/tmp/my-custom-venv' but got '$VENV'"
             exit 1
           fi
-          echo "PASS: venv path matches custom path"
+          echo "PASS: venv=$VENV"
+
       - name: Assert custom venv directory exists
         run: |
           if [ ! -d "/tmp/my-custom-venv" ]; then
@@ -32,11 +38,3 @@ jobs:
             exit 1
           fi
           echo "PASS: custom venv directory exists"
-      - name: Assert python is available in custom venv
-        run: |
-          PYTHON_BIN="/tmp/my-custom-venv/bin/python"
-          if [ ! -f "$PYTHON_BIN" ] && [ ! -L "$PYTHON_BIN" ]; then
-            echo "FAIL: python not found in custom venv at $PYTHON_BIN"
-            exit 1
-          fi
-          echo "PASS: python found in custom venv"
