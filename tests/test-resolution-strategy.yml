@@ -1,0 +1,47 @@
+name: Test resolution-strategy lowest
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: setup-uv
+        uses: .
+        with:
+          version: ">=0.4.0"
+          enable-cache: "false"
+          resolution-strategy: "lowest"
+
+      - name: Assert uv-version output is set
+        env:
+          UV_VERSION: ${{ steps.setup-uv.outputs.uv-version }}
+        run: |
+          echo "uv-version: $UV_VERSION"
+          if [ -z "$UV_VERSION" ]; then
+            echo "FAIL: uv-version output is empty"
+            exit 1
+          fi
+          echo "PASS: uv-version=$UV_VERSION"
+
+      - name: Assert uv is functional
+        run: |
+          echo "uv version: $(uv --version)"
+          if ! uv --version; then
+            echo "FAIL: uv is not functional"
+            exit 1
+          fi
+          echo "PASS: uv is functional"
+
+      - name: Assert installed version satisfies constraint
+        env:
+          UV_VERSION: ${{ steps.setup-uv.outputs.uv-version }}
+        run: |
+          echo "Checking version $UV_VERSION satisfies >=0.4.0"
+          MAJOR=$(echo "$UV_VERSION" | cut -d. -f1)
+          MINOR=$(echo "$UV_VERSION" | cut -d. -f2)
+          if [ "$MAJOR" -lt 0 ] || ([ "$MAJOR" -eq 0 ] && [ "$MINOR" -lt 4 ]); then
+            echo "FAIL: version $UV_VERSION does not satisfy >=0.4.0"
+            exit 1
+          fi
+          echo "PASS: version $UV_VERSION satisfies >=0.4.0"

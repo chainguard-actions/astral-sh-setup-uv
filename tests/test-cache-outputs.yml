@@ -1,0 +1,56 @@
+name: Test cache outputs
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: setup-uv
+        uses: .
+        with:
+          version: "latest"
+          enable-cache: "true"
+          ignore-nothing-to-cache: "true"
+
+      - name: Assert uv-version output is set
+        env:
+          UV_VERSION: ${{ steps.setup-uv.outputs.uv-version }}
+        run: |
+          echo "uv-version: $UV_VERSION"
+          if [ -z "$UV_VERSION" ]; then
+            echo "FAIL: uv-version output is empty"
+            exit 1
+          fi
+          echo "PASS: uv-version=$UV_VERSION"
+
+      - name: Assert cache-key output is set
+        env:
+          CACHE_KEY: ${{ steps.setup-uv.outputs.cache-key }}
+        run: |
+          echo "cache-key: $CACHE_KEY"
+          if [ -z "$CACHE_KEY" ]; then
+            echo "FAIL: cache-key output is empty"
+            exit 1
+          fi
+          echo "PASS: cache-key is set to $CACHE_KEY"
+
+      - name: Assert cache-hit output is a boolean string
+        env:
+          CACHE_HIT: ${{ steps.setup-uv.outputs.cache-hit }}
+        run: |
+          echo "cache-hit: $CACHE_HIT"
+          if [ "$CACHE_HIT" != "true" ] && [ "$CACHE_HIT" != "false" ] && [ -z "$CACHE_HIT" ]; then
+            echo "FAIL: cache-hit should be 'true', 'false', or empty but got '$CACHE_HIT'"
+            exit 1
+          fi
+          echo "PASS: cache-hit=$CACHE_HIT"
+
+      - name: Assert uv is functional
+        run: |
+          echo "uv version: $(uv --version)"
+          if ! uv --version; then
+            echo "FAIL: uv is not functional"
+            exit 1
+          fi
+          echo "PASS: uv is functional"

@@ -1,6 +1,6 @@
 <!-- markdownlint-disable -->
 
-# Hardening Report: astral-sh--setup-uv--/v8.3.0
+# Hardening Report: astral-sh--setup-uv/v8.3.0
 
 > This file was generated automatically by the hardening agent.
 
@@ -8,50 +8,49 @@
 
 **Test Policy SHA:** `843adf9e4b8f85d0c08b27b9d0b09dd094b54702`
 
-**Harden Agent Version:** `1`
+**Harden Agent Version:** `2`
 
-Action **astral-sh--setup-uv--/v8.3.0** was hardened automatically. 1 finding(s) were identified and resolved across 1 iteration(s).
+Action **astral-sh--setup-uv/v8.3.0** was hardened automatically. 2 finding(s) were identified and resolved across 1 iteration(s).
 
 ## Findings Fixed
 
 ### script-injection (severity: high)
 
-Rule (a): Multiple `run:` blocks in `.github/workflows/test.yml` directly interpolate `${{ matrix.* }}` and `${{ needs.*.result }}` expressions inside shell commands. This allows template substitution to inject arbitrary shell metacharacters before the shell parses the command. Affected steps:
-- `test-specific-version` job, 'Correct version gets installed' step: `if [ "$(uv --version)" != "uv ${{ matrix.input.expected-version }}" ]`
-- `test-specific-version` job, 'Output has correct version' step: `if [ "$UV_VERSION" != "${{ matrix.input.expected-version }}" ]`
-- `test-from-working-directory-version` job, 'Correct version gets installed' step: `if [ "$(uv --version)" != "uv ${{ matrix.input.expected-version }}" ]`
-- `test-version-file-version` job, 'Correct version gets installed' step: `if [ "$(uv --version)" != "uv ${{ matrix.input.expected-version }}" ]`
-- `test-cache-key-os-version` job, 'Verify cache key contains OS version' step: `if [[ "$CACHE_KEY" != *"${{ matrix.expected-os }}"* ]]` and `echo "... ${{ matrix.expected-os }}"`
-- `test-cache-local` job: `if [ "$UV_CACHE_DIR" != "${{ matrix.inputs.expected-cache-dir }}" ]`
-- `test-python-install-dir` job: `if [ "$UV_PYTHON_INSTALL_DIR" != "${{ matrix.inputs.expected-python-dir }}" ]`
-- `all-tests-passed` job: `exit ${{ (contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')) && 1 || 0 }}`
+Multiple `run:` blocks in test.yml directly interpolate `${{ ... }}` expressions into shell commands (rule a). This includes `${{ matrix.input.expected-version }}`, `${{ matrix.expected-os }}`, `${{ matrix.inputs.expected-cache-dir }}`, `${{ matrix.inputs.expected-python-dir }}`, and `${{ needs.*.result }}` expressions embedded directly in shell strings and `exit` commands. Even though matrix values are workflow-controlled, any `${{ ... }}` expression inside a `run:` block is a script-injection risk because the value is substituted by the YAML template engine before the shell ever sees it, allowing shell metacharacters to be injected. Offending lines include:
+- `if [ "$(uv --version)" != "uv ${{ matrix.input.expected-version }}" ]` (test-specific-version, test-from-working-directory-version, test-version-file-version jobs)
+- `if [[ "$CACHE_KEY" != *"${{ matrix.expected-os }}"* ]]` (test-cache-key-os-version job)
+- `if [ "$UV_CACHE_DIR" != "${{ matrix.inputs.expected-cache-dir }}" ]` (test-cache-local job)
+- `if [ "$UV_PYTHON_INSTALL_DIR" != "${{ matrix.inputs.expected-python-dir }}" ]` (test-python-install-dir job)
+- `echo "All jobs passed: ${{ !(contains(needs.*.result, ...)) }}"` and `exit ${{ (contains(needs.*.result, ...)) && 1 || 0 }}` (all-tests-passed job)
 
 Locations:
 
-- `.github/workflows/test.yml:100`
-- `.github/workflows/test.yml:105`
-- `.github/workflows/test.yml:155`
-- `.github/workflows/test.yml:178`
-- `.github/workflows/test.yml:380`
-- `.github/workflows/test.yml:560`
-- `.github/workflows/test.yml:790`
-- `.github/workflows/test.yml:860`
+- `.github/workflows/test.yml:115`
+- `.github/workflows/test.yml:120`
+- `.github/workflows/test.yml:175`
+- `.github/workflows/test.yml:200`
+- `.github/workflows/test.yml:432`
+- `.github/workflows/test.yml:435`
+- `.github/workflows/test.yml:643`
+- `.github/workflows/test.yml:905`
+- `.github/workflows/test.yml:975`
+- `.github/workflows/test.yml:977`
+
+### github-env-injection (severity: high)
+
+In `.github/workflows/update-docs.yml`, the "Get tag info" step writes `$TAG_NAME` (derived from `$INPUT_TAG` which is `${{ inputs.tag }}`) to `$GITHUB_OUTPUT` without the required `printf '%s' ... | tr -d '\n\r'` sanitization. The bash regex validation `[[ ! "$TAG_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]` uses `$` which in bash matches end-of-line rather than end-of-string, so a value containing an embedded newline (e.g. `v1.0.0\nmalicious=value`) can bypass the check and inject additional key=value pairs into `$GITHUB_OUTPUT`. The unsanitized write is: `echo "tag=$TAG_NAME" >> "$GITHUB_OUTPUT"`.
+
+Locations:
+
+- `.github/workflows/update-docs.yml:35`
 
 ## Iteration Notes
 
 ### Iteration 1
 
-**Fixes applied:** script-injection
+**Fixes applied:** script-injection, github-env-injection
 
 **Notes:**
 
-Fixed all 8 script injection locations in .github/workflows/test.yml by moving ${{ matrix.* }} and ${{ needs.*.result }} expressions out of run: shell commands and into env: blocks. Changes made:
-1. test-specific-version 'Correct version gets installed': moved ${{ matrix.input.expected-version }} to EXPECTED_VERSION env var
-2. test-specific-version 'Output has correct version': moved ${{ matrix.input.expected-version }} to EXPECTED_VERSION env var
-3. test-from-working-directory-version 'Correct version gets installed': moved ${{ matrix.input.expected-version }} to EXPECTED_VERSION env var
-4. test-version-file-version 'Correct version gets installed': moved ${{ matrix.input.expected-version }} to EXPECTED_VERSION env var
-5. test-cache-key-os-version 'Verify cache key contains OS version': moved ${{ matrix.expected-os }} to EXPECTED_OS env var
-6. test-cache-local run step: moved ${{ matrix.inputs.expected-cache-dir }} to EXPECTED_CACHE_DIR env var
-7. test-python-install-dir 'Check Python dir is expected dir': moved ${{ matrix.inputs.expected-python-dir }} to EXPECTED_PYTHON_DIR env var
-8. all-tests-passed 'All tests passed': replaced exit ${{ (contains(needs.*.result, 'failure') || ...) && 1 || 0 }} with ALL_PASSED env var and shell if/exit logic
+Fixed github-env-injection in update-docs.yml by sanitizing TAG_NAME with printf/tr before writing to GITHUB_OUTPUT. Fixed script-injection in test.yml by moving all ${{ matrix.* }} and ${{ needs.* }} expressions from run: shell strings into env: blocks and referencing them as plain environment variables ($EXPECTED_VERSION, $EXPECTED_OS, $EXPECTED_CACHE_DIR, $EXPECTED_PYTHON_DIR, $ALL_PASSED). The all-tests-passed job's exit ${{ ... }} pattern was replaced with a proper if/exit 1 check using an env var.
 

@@ -37,7 +37,8 @@ jobs:
           fi
 
           COMMIT_SHA=$(git rev-list -n 1 "$TAG_NAME")
-          echo "tag=$TAG_NAME" >> "$GITHUB_OUTPUT"
+          safe_tag=$(printf '%s' "$TAG_NAME" | tr -d '\n\r')
+          echo "tag=$safe_tag" >> "$GITHUB_OUTPUT"
           echo "sha=$COMMIT_SHA" >> "$GITHUB_OUTPUT"
         env:
           INPUT_TAG: ${{ inputs.tag }}
