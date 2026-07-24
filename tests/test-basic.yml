@@ -1,22 +1,15 @@
-name: Test basic usage - install latest uv
+name: Test basic uv installation (latest)
 on:
   workflow_dispatch:
 jobs:
   test:
     runs-on: ubuntu-latest
-    env:
-      GITHUB_REF: refs/heads/main
-      GITHUB_EVENT_NAME: push
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-
       - id: setup-uv
         uses: .
         with:
-          version: "latest"
           enable-cache: "false"
-          ignore-empty-workdir: "true"
-
       - name: Assert uv-version output is set
         env:
           UV_VERSION: ${{ steps.setup-uv.outputs.uv-version }}
@@ -27,7 +20,6 @@ jobs:
             exit 1
           fi
           echo "PASS: uv-version=$UV_VERSION"
-
       - name: Assert uv-path output is set
         env:
           UV_PATH: ${{ steps.setup-uv.outputs.uv-path }}
@@ -38,7 +30,6 @@ jobs:
             exit 1
           fi
           echo "PASS: uv-path=$UV_PATH"
-
       - name: Assert uvx-path output is set
         env:
           UVX_PATH: ${{ steps.setup-uv.outputs.uvx-path }}
@@ -49,16 +40,21 @@ jobs:
             exit 1
           fi
           echo "PASS: uvx-path=$UVX_PATH"
-
-      - name: Assert uv binary is executable and on PATH
+      - name: Assert uv binary is executable and works
         run: |
-          if ! command -v uv >/dev/null 2>&1; then
-            echo "FAIL: uv not found on PATH"
+          echo "Running: uv --version"
+          uv --version
+          if [ $? -ne 0 ]; then
+            echo "FAIL: uv --version failed"
             exit 1
           fi
-          echo "PASS: uv found at $(command -v uv)"
-
-      - name: Assert uv runs successfully
+          echo "PASS: uv is executable"
+      - name: Assert uvx binary is executable and works
         run: |
-          uv --version
-          echo "PASS"
+          echo "Running: uvx --version"
+          uvx --version
+          if [ $? -ne 0 ]; then
+            echo "FAIL: uvx --version failed"
+            exit 1
+          fi
+          echo "PASS: uvx is executable"

@@ -1,44 +1,36 @@
-name: Test specific version installation
+name: Test specific uv version installation
 on:
   workflow_dispatch:
 jobs:
   test:
     runs-on: ubuntu-latest
-    env:
-      GITHUB_REF: refs/heads/main
-      GITHUB_EVENT_NAME: push
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-
       - id: setup-uv
         uses: .
         with:
           version: "0.5.0"
           enable-cache: "false"
-          ignore-empty-workdir: "true"
-
       - name: Assert uv-version output matches requested version
         env:
           UV_VERSION: ${{ steps.setup-uv.outputs.uv-version }}
         run: |
           echo "uv-version: $UV_VERSION"
           if [ "$UV_VERSION" != "0.5.0" ]; then
-            echo "FAIL: expected uv-version '0.5.0', got '$UV_VERSION'"
+            echo "FAIL: expected uv-version=0.5.0, got $UV_VERSION"
             exit 1
           fi
-          echo "PASS: uv-version=$UV_VERSION"
-
+          echo "PASS: uv-version=0.5.0"
       - name: Assert uv binary reports correct version
         run: |
           INSTALLED=$(uv --version | awk '{print $2}')
           echo "installed version: $INSTALLED"
           if [ "$INSTALLED" != "0.5.0" ]; then
-            echo "FAIL: expected uv version '0.5.0', got '$INSTALLED'"
+            echo "FAIL: expected uv 0.5.0, got $INSTALLED"
             exit 1
           fi
-          echo "PASS"
-
-      - name: Assert uv-path output points to existing file
+          echo "PASS: uv version is 0.5.0"
+      - name: Assert uv-path output points to a real file
         env:
           UV_PATH: ${{ steps.setup-uv.outputs.uv-path }}
         run: |
@@ -47,4 +39,4 @@ jobs:
             echo "FAIL: uv binary not found at $UV_PATH"
             exit 1
           fi
-          echo "PASS"
+          echo "PASS: uv binary exists at $UV_PATH"

@@ -1,0 +1,67 @@
+name: Test version range resolution strategy
+on:
+  workflow_dispatch:
+jobs:
+  test-highest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: setup-uv
+        uses: .
+        with:
+          version: ">=0.5.0"
+          resolution-strategy: "highest"
+          enable-cache: "false"
+      - name: Assert uv-version output is set
+        env:
+          UV_VERSION: ${{ steps.setup-uv.outputs.uv-version }}
+        run: |
+          echo "uv-version: $UV_VERSION"
+          if [ -z "$UV_VERSION" ]; then
+            echo "FAIL: uv-version output is empty"
+            exit 1
+          fi
+          echo "PASS: uv-version=$UV_VERSION"
+      - name: Assert installed version satisfies range
+        run: |
+          INSTALLED=$(uv --version | awk '{print $2}')
+          echo "installed version: $INSTALLED"
+          # Version should be >= 0.5.0
+          MAJOR=$(echo "$INSTALLED" | cut -d. -f1)
+          MINOR=$(echo "$INSTALLED" | cut -d. -f2)
+          PATCH=$(echo "$INSTALLED" | cut -d. -f3 | cut -d- -f1)
+          if [ "$MAJOR" -lt 0 ] || ([ "$MAJOR" -eq 0 ] && [ "$MINOR" -lt 5 ]); then
+            echo "FAIL: expected version >= 0.5.0, got $INSTALLED"
+            exit 1
+          fi
+          echo "PASS: installed version $INSTALLED satisfies >=0.5.0"
+  test-lowest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: setup-uv
+        uses: .
+        with:
+          version: ">=0.5.0,<0.6.0"
+          resolution-strategy: "lowest"
+          enable-cache: "false"
+      - name: Assert uv-version output is set
+        env:
+          UV_VERSION: ${{ steps.setup-uv.outputs.uv-version }}
+        run: |
+          echo "uv-version: $UV_VERSION"
+          if [ -z "$UV_VERSION" ]; then
+            echo "FAIL: uv-version output is empty"
+            exit 1
+          fi
+          echo "PASS: uv-version=$UV_VERSION"
+      - name: Assert installed version is the lowest in range
+        run: |
+          INSTALLED=$(uv --version | awk '{print $2}')
+          echo "installed version: $INSTALLED"
+          # With lowest strategy and >=0.5.0,<0.6.0, should get 0.5.0
+          if [ "$INSTALLED" != "0.5.0" ]; then
+            echo "FAIL: expected lowest version 0.5.0, got $INSTALLED"
+            exit 1
+          fi
+          echo "PASS: lowest resolution strategy installed 0.5.0"

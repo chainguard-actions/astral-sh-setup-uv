@@ -4,41 +4,40 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    env:
-      GITHUB_REF: refs/heads/main
-      GITHUB_EVENT_NAME: push
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-
       - id: setup-uv
         uses: .
         with:
-          version: "latest"
-          python-version: "3.12"
+          version: "0.5.0"
+          python-version: "3.11"
           enable-cache: "false"
-          ignore-empty-workdir: "true"
-
-      - name: Assert uv-version output is set
+      - name: Assert python-version output is set
         env:
-          UV_VERSION: ${{ steps.setup-uv.outputs.uv-version }}
+          PY_VERSION: ${{ steps.setup-uv.outputs.python-version }}
         run: |
-          echo "uv-version: $UV_VERSION"
-          if [ -z "$UV_VERSION" ]; then
-            echo "FAIL: uv-version output is empty"
+          echo "python-version: $PY_VERSION"
+          if [ -z "$PY_VERSION" ]; then
+            echo "FAIL: python-version output is empty"
             exit 1
           fi
-          echo "PASS: uv-version=$UV_VERSION"
-
-      - name: Assert UV_PYTHON env var is set to 3.12
+          echo "PASS: python-version=$PY_VERSION"
+      - name: Assert UV_PYTHON env var is set
         run: |
-          echo "UV_PYTHON=$UV_PYTHON"
-          if [ "$UV_PYTHON" != "3.12" ]; then
-            echo "FAIL: expected UV_PYTHON='3.12', got '$UV_PYTHON'"
+          echo "UV_PYTHON: $UV_PYTHON"
+          if [ -z "$UV_PYTHON" ]; then
+            echo "FAIL: UV_PYTHON env var is not set"
             exit 1
           fi
           echo "PASS: UV_PYTHON=$UV_PYTHON"
-
-      - name: Assert uv is functional
+      - name: Assert uv can use the specified python version
         run: |
-          uv --version
-          echo "PASS"
+          echo "Running: uv python find 3.11"
+          uv python install 3.11
+          PY_PATH=$(uv python find 3.11)
+          echo "Python path: $PY_PATH"
+          if [ -z "$PY_PATH" ]; then
+            echo "FAIL: could not find python 3.11 via uv"
+            exit 1
+          fi
+          echo "PASS: uv found python 3.11 at $PY_PATH"

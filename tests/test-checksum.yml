@@ -6,23 +6,28 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - id: action
+      - id: setup-uv
         uses: .
         with:
-          version: "0.5.0"
-          checksum: "sha256:2381b6e4a4c90079f8a800f2a7b343d4f4e4a4c90079f8a800f2a7b343d4f4e4"
+          version: "0.9.26"
+          checksum: "30ccbf0a66dc8727a02b0e245c583ee970bdafecf3a443c1686e1b30ec4939e8"
           enable-cache: "false"
-        continue-on-error: true
-      - name: Assert action ran (checksum mismatch is acceptable failure)
+      - name: Assert uv-version output matches requested version
         env:
-          OUTCOME: ${{ steps.action.outcome }}
+          UV_VERSION: ${{ steps.setup-uv.outputs.uv-version }}
         run: |
-          echo "outcome: $OUTCOME"
-          # The action may fail if checksum doesn't match, which is expected behavior
-          # We just verify the input is accepted and the action processes it
-          if [ "$OUTCOME" = "success" ] || [ "$OUTCOME" = "failure" ]; then
-            echo "PASS: action processed checksum input (outcome=$OUTCOME)"
-          else
-            echo "FAIL: unexpected outcome: $OUTCOME"
+          echo "uv-version: $UV_VERSION"
+          if [ "$UV_VERSION" != "0.9.26" ]; then
+            echo "FAIL: expected uv-version=0.9.26, got $UV_VERSION"
             exit 1
           fi
+          echo "PASS: uv-version=0.9.26"
+      - name: Assert uv binary is executable and works
+        run: |
+          echo "Running: uv --version"
+          uv --version
+          if [ $? -ne 0 ]; then
+            echo "FAIL: uv --version failed"
+            exit 1
+          fi
+          echo "PASS: uv is executable with verified checksum"

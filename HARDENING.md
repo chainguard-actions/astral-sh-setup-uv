@@ -8,34 +8,53 @@
 
 **Test Policy SHA:** `843adf9e4b8f85d0c08b27b9d0b09dd094b54702`
 
-**Harden Agent Version:** `1`
+**Harden Agent Version:** `2`
 
-Action **astral-sh--setup-uv/v8.3.1** was hardened automatically. 1 finding(s) were identified and resolved across 1 iteration(s).
+Action **astral-sh--setup-uv/v8.3.1** was hardened automatically. 2 finding(s) were identified and resolved across 1 iteration(s).
 
 ## Findings Fixed
 
 ### script-injection (severity: high)
 
-Rule (a): Multiple ${{ ... }} expressions are directly interpolated inside run: shell command strings in .github/workflows/test.yml. This includes: (1) `${{ matrix.input.expected-version }}` in the 'Correct version gets installed' and 'Output has correct version' run blocks (test-specific-version job); (2) `${{ matrix.input.expected-version }}` in 'Correct version gets installed' run blocks (test-from-working-directory-version and test-version-file-version jobs); (3) `${{ matrix.expected-os }}` in the 'Verify cache key contains OS version' run block (test-cache-key-os-version job); (4) `${{ matrix.inputs.expected-cache-dir }}` in a run block (test-cache-local job); (5) `${{ matrix.inputs.expected-python-dir }}` in the 'Check Python dir is expected dir' run block (test-python-install-dir job); (6) `echo "All jobs passed: ${{ !(contains(needs.*.result, 'failure') || ...) }}"` and `exit ${{ (contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')) && 1 || 0 }}` in the all-tests-passed run block. Any ${{ }} expression interpolated directly into a run: block is a script-injection risk regardless of the context it reads from.
+Multiple `run:` blocks in test.yml directly interpolate `${{ ... }}` expressions inside shell commands (sub-rule a). This allows the expression value to be parsed by the shell before quoting can protect it.
+
+1. `test-specific-version` job, "Correct version gets installed" step: `if [ "$(uv --version)" != "uv ${{ matrix.input.expected-version }}" ]`
+2. `test-specific-version` job, "Output has correct version" step: `if [ "$UV_VERSION" != "${{ matrix.input.expected-version }}" ]`
+3. `test-from-working-directory-version` job, "Correct version gets installed" step: `if [ "$(uv --version)" != "uv ${{ matrix.input.expected-version }}" ]`
+4. `test-version-file-version` job, "Correct version gets installed" step: `if [ "$(uv --version)" != "uv ${{ matrix.input.expected-version }}" ]`
+5. `test-cache-key-os-version` job, "Verify cache key contains OS version" step: `if [[ "$CACHE_KEY" != *"${{ matrix.expected-os }}"* ]]` and `echo "Cache key does not contain expected OS version: ${{ matrix.expected-os }}"`
+6. `test-cache-local` job: `if [ "$UV_CACHE_DIR" != "${{ matrix.inputs.expected-cache-dir }}" ]`
+7. `test-python-install-dir` job, "Check Python dir is expected dir" step: `if [ "$UV_PYTHON_INSTALL_DIR" != "${{ matrix.inputs.expected-python-dir }}" ]`
+8. `all-tests-passed` job, "All tests passed" step: `echo "All jobs passed: ${{ !(contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')) }}"` and `exit ${{ (contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')) && 1 || 0 }}`
+
+All `${{ ... }}` expressions inside `run:` blocks are script-injection risks regardless of whether the context appears GitHub-controlled.
 
 Locations:
 
-- `.github/workflows/test.yml:139`
-- `.github/workflows/test.yml:145`
-- `.github/workflows/test.yml:195`
-- `.github/workflows/test.yml:225`
-- `.github/workflows/test.yml:490`
-- `.github/workflows/test.yml:720`
-- `.github/workflows/test.yml:1000`
-- `.github/workflows/test.yml:1085`
+- `.github/workflows/test.yml:113`
+- `.github/workflows/test.yml:118`
+- `.github/workflows/test.yml:175`
+- `.github/workflows/test.yml:200`
+- `.github/workflows/test.yml:440`
+- `.github/workflows/test.yml:641`
+- `.github/workflows/test.yml:900`
+- `.github/workflows/test.yml:975`
+
+### github-env-injection (severity: high)
+
+In `update-docs.yml`, the "Get tag info" step writes `TAG_NAME` to `$GITHUB_OUTPUT` without the required `printf '%s' ... | tr -d '\n\r'` sanitization. `TAG_NAME` is derived from `$INPUT_TAG`, which is set from `${{ inputs.tag }}` (a workflow-controllable input). Although a regex validation (`^v[0-9]+\.[0-9]+\.[0-9]+$`) is applied before the write, the check requires explicit newline stripping via `tr -d '\n\r'` before every write to a special environment file when the source is untrusted input. The lines `echo "tag=$TAG_NAME" >> "$GITHUB_OUTPUT"` and `echo "sha=$COMMIT_SHA" >> "$GITHUB_OUTPUT"` are missing this sanitization step.
+
+Locations:
+
+- `.github/workflows/update-docs.yml:35`
 
 ## Iteration Notes
 
 ### Iteration 1
 
-**Fixes applied:** script-injection
+**Fixes applied:** script-injection, github-env-injection
 
 **Notes:**
 
-Fixed all script injection vulnerabilities in .github/workflows/test.yml by moving ${{ }} expressions from run: shell blocks into env: blocks: (1) test-specific-version job: Moved matrix.input.expected-version to env var EXPECTED_VERSION in both 'Correct version gets installed' and 'Output has correct version' steps. (2) test-from-working-directory-version job: Moved matrix.input.expected-version to env var EXPECTED_VERSION. (3) test-version-file-version job: Moved matrix.input.expected-version to env var EXPECTED_VERSION. (4) test-cache-key-os-version job: Moved matrix.expected-os to env var EXPECTED_OS. (5) test-cache-local job: Moved matrix.inputs.expected-cache-dir to env var EXPECTED_CACHE_DIR. (6) test-python-install-dir job: Moved matrix.inputs.expected-python-dir to env var EXPECTED_PYTHON_DIR. (7) all-tests-passed job: Moved both boolean expressions to env vars ALL_PASSED and EXIT_CODE, replacing 'exit ${{ ... }}' with a conditional shell check.
+Fixed github-env-injection in update-docs.yml by sanitizing TAG_NAME and COMMIT_SHA with printf/tr before writing to $GITHUB_OUTPUT. Fixed all 8 script-injection instances in test.yml by moving ${{ ... }} expressions from run: shell commands into env: blocks and referencing them as plain environment variables ($EXPECTED_VERSION, $EXPECTED_OS, $EXPECTED_CACHE_DIR, $EXPECTED_PYTHON_DIR, $ALL_PASSED, $EXIT_CODE).
 
