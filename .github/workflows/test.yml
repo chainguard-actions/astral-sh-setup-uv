@@ -1,0 +1,1214 @@
+name: "test"
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write # for zizmor
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Actionlint
+        uses: eifinger/actionlint-action@1fc89649be682d16ec5cf65ea16e269eb88d3982 # v1.10.2
+      - name: Run zizmor
+        uses: zizmorcore/zizmor-action@3dc1ecc9bcb9e94e9b2c709687979e1298497054 # v0.6.2
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: |
+          npm ci --ignore-scripts
+      - run: |
+          npm run all
+      - name: Check all jobs are in all-tests-passed.needs
+        run: |
+          tsc -p tsconfig.json
+          node check-all-tests-passed-needs.js
+        working-directory: .github/scripts
+      - name: Make sure no changes from linters are detected
+        run: |
+          git diff --exit-code || (echo "::error::Please run 'npm run all' to fix the issues" && exit 1)
+
+  test-default-version:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, macos-14, windows-latest]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install latest version
+        id: setup-uv
+        uses: ./
+      - run: uv sync
+        working-directory: __tests__/fixtures/uv-project
+        shell: bash
+      - name: Check uv-path is set
+        run: |
+          "${UV_PATH}" --version
+        shell: bash
+        env:
+          UV_PATH: ${{ steps.setup-uv.outputs.uv-path }}
+      - name: Check uvx-path is set
+        run: |
+          "${UVX_PATH}" --version
+        shell: bash
+        env:
+          UVX_PATH: ${{ steps.setup-uv.outputs.uvx-path }}
+
+  test-uv-no-modify-path:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install with UV_NO_MODIFY_PATH set
+        id: setup-uv
+        uses: ./
+        env:
+          UV_NO_MODIFY_PATH: 1
+      - run: |
+          "${UV_PATH}" sync
+        working-directory: __tests__/fixtures/uv-project
+        shell: bash
+        env:
+          UV_PATH: ${{ steps.setup-uv.outputs.uv-path }}
+      - name: uv is not on PATH
+        run: |
+          if command -v uv; then
+              echo "uv should not be on PATH"
+              exit 1
+          fi
+
+  test-specific-version:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        input:
+          - version-input: "0.3.0"
+            expected-version: "0.3.0"
+          - version-input: "0.3.2"
+            expected-version: "0.3.2"
+          - version-input: "0.3"
+            expected-version: "0.3.5"
+          - version-input: "0.3.x"
+            expected-version: "0.3.5"
+          - version-input: ">=0.4.25,<0.5"
+            expected-version: "0.4.30"
+          - version-input: ">=0.4.25,<0.5"
+            expected-version: "0.4.25"
+            resolution-strategy: "lowest"
+          - version-input: ">=0.4.25"
+            expected-version: "0.4.25"
+            resolution-strategy: "lowest"
+          - version-input: ">=0.1,<0.2"
+            expected-version: "0.1.45"
+            resolution-strategy: "highest"
+          - version-input: ">=0.1.0,<0.2"
+            expected-version: "0.1.0"
+            resolution-strategy: "lowest"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install version ${{ matrix.input.version-input }} with strategy ${{ matrix.input.resolution-strategy || 'highest' }}
+        id: setup-uv
+        uses: ./
+        with:
+          version: ${{ matrix.input.version-input }}
+          resolution-strategy: ${{ matrix.input.resolution-strategy || 'highest' }}
+      - name: Correct version gets installed
+        env:
+          EXPECTED_VERSION: ${{ matrix.input.expected-version }}
+        run: |
+          if [ "$(uv --version)" != "uv $EXPECTED_VERSION" ]; then
+            echo "Wrong uv version: $(uv --version)"
+            exit 1
+          fi
+      - name: Output has correct version
+        run: |
+          if [ "$UV_VERSION" != "$EXPECTED_VERSION" ]; then
+            exit 1
+          fi
+        env:
+          UV_VERSION: ${{ steps.setup-uv.outputs.uv-version }}
+          EXPECTED_VERSION: ${{ matrix.input.expected-version }}
+
+  test-latest-version:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        version-input: ["latest", ">=0.8"]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install version ${{ matrix.version-input }}
+        uses: ./
+        with:
+          version: ${{ matrix.version-input }}
+      - name: Latest version gets installed
+        run: |
+          LATEST_VERSION=$(gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" /repos/astral-sh/uv/releases/latest | jq -r '.tag_name')
+          UV_VERSION_OUTPUT=$(uv --version)
+
+          if [[ ! "$UV_VERSION_OUTPUT" =~ ^uv[[:space:]]+([^[:space:]]+) ]]; then
+            echo "Could not parse uv version from: $UV_VERSION_OUTPUT"
+            exit 1
+          fi
+
+          UV_VERSION="${BASH_REMATCH[1]}"
+
+          echo "Latest version is $LATEST_VERSION"
+          echo "uv --version output is $UV_VERSION_OUTPUT"
+          echo "Parsed uv version is $UV_VERSION"
+
+          if [ "$UV_VERSION" != "$LATEST_VERSION" ]; then
+            echo "Wrong uv version: $UV_VERSION_OUTPUT"
+            exit 1
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+  test-from-working-directory-version:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        input:
+          - working-directory: "__tests__/fixtures/pyproject-toml-project"
+            expected-version: "0.5.14"
+          - working-directory: "__tests__/fixtures/uv-toml-project"
+            expected-version: "0.5.15"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install version from ${{ matrix.input.working-directory }}
+        uses: ./
+        with:
+          working-directory: ${{ matrix.input.working-directory }}
+      - name: Correct version gets installed
+        env:
+          EXPECTED_VERSION: ${{ matrix.input.expected-version }}
+        run: |
+          if [ "$(uv --version)" != "uv $EXPECTED_VERSION" ]; then
+            echo "Wrong uv version: $(uv --version)"
+            exit 1
+          fi
+
+  test-version-file-version:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        input:
+          - version-file: "__tests__/fixtures/uv-in-requirements-txt-project/requirements.txt"
+            expected-version: "0.6.17"
+          - version-file: "__tests__/fixtures/uv-in-requirements-hash-txt-project/requirements.txt"
+            expected-version: "0.8.3"
+          - version-file: "__tests__/fixtures/.tool-versions"
+            expected-version: "0.5.15"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install version from ${{ matrix.input.version-file }}
+        uses: ./
+        with:
+          version-file: ${{ matrix.input.version-file }}
+      - name: Correct version gets installed
+        env:
+          EXPECTED_VERSION: ${{ matrix.input.expected-version }}
+        run: |
+          if [ "$(uv --version)" != "uv $EXPECTED_VERSION" ]; then
+            echo "Wrong uv version: $(uv --version)"
+            exit 1
+          fi
+
+  test-tool-versions-python-version:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install versions from .tool-versions
+        id: setup-uv
+        uses: ./
+        with:
+          version-file: "__tests__/fixtures/.tool-versions"
+      - name: Verify Python version from .tool-versions
+        run: |
+          if [ "$UV_PYTHON" != "3.13.1t" ]; then
+            echo "Wrong UV_PYTHON: $UV_PYTHON"
+            exit 1
+          fi
+          if [ "$PYTHON_VERSION" != "3.13.1t" ]; then
+            echo "Wrong python-version output: $PYTHON_VERSION"
+            exit 1
+          fi
+        shell: bash
+        env:
+          PYTHON_VERSION: ${{ steps.setup-uv.outputs.python-version }}
+
+  test-malformed-pyproject-file-fallback:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install using malformed pyproject.toml
+        id: setup-uv
+        uses: ./
+        with:
+          working-directory: "__tests__/fixtures/malformed-pyproject-toml-project"
+      - run: uv --help
+
+  test-checksum:
+    runs-on: ${{ matrix.inputs.os }}
+    strategy:
+      matrix:
+        inputs:
+          - os: ubuntu-latest
+            checksum: "4d9279ad5ca596b1e2d703901d508430eb07564dc4d8837de9e2fca9c90f8ecd"
+          - os: macos-latest
+            checksum: "a70cbfbf3bb5c08b2f84963b4f12c94e08fbb2468ba418a3bfe1066fbe9e7218"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Checksum matches expected
+        uses: ./
+        with:
+          version: "0.3.2"
+          checksum: ${{ matrix.inputs.checksum }}
+      - run: uv sync
+        working-directory: __tests__/fixtures/uv-project
+
+  test-with-explicit-token:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install default version
+        uses: ./
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - run: uv sync
+        working-directory: __tests__/fixtures/uv-project
+
+  test-uvx:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install default version
+        uses: ./
+      - run: uvx ruff --version
+
+  test-tool-install:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, macos-14, windows-latest]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install default version
+        uses: ./
+      - run: uv tool install ruff
+      - run: ruff --version
+
+  test-python-version:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install latest version
+        id: setup-uv
+        uses: ./
+        with:
+          python-version: 3.13.1t
+      - name: Verify UV_PYTHON is set to correct version
+        run: |
+          echo "$UV_PYTHON"
+          if [ "$UV_PYTHON" != "3.13.1t" ]; then
+            exit 1
+          fi
+        shell: bash
+      - name: Verify output python-version is correct
+        run: |
+          if [ "$PYTHON_VERSION" != "3.13.1t" ]; then
+            exit 1
+          fi
+        shell: bash
+        env:
+          PYTHON_VERSION: ${{ steps.setup-uv.outputs.python-version }}
+      - run: uv sync
+        working-directory: __tests__/fixtures/uv-project
+
+  test-activate-environment:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install latest version
+        id: setup-uv
+        uses: ./
+        with:
+          python-version: 3.13.1t
+          activate-environment: true
+      - name: Verify packages can be installed
+        run: uv pip install pip
+        shell: bash
+      - name: Verify python version is correct
+        run: |
+          python --version
+          if [ "$(python --version)" != "Python 3.13.1" ]; then
+            exit 1
+          fi
+        shell: bash
+      - name: Verify output venv is set
+        run: |
+          if [ -z "$UV_VENV" ]; then
+            echo "output venv is not set"
+            exit 1
+          fi
+          if [ ! -d "$UV_VENV" ]; then
+            echo "output venv not point to a directory: $UV_VENV"
+            exit 1
+          fi
+        shell: bash
+        env:
+          UV_VENV: ${{ steps.setup-uv.outputs.venv }}
+
+  test-activate-environment-custom-path:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install latest version
+        id: setup-uv
+        uses: ./
+        with:
+          python-version: 3.13.1t
+          activate-environment: true
+          venv-path: ${{ runner.temp }}/custom-venv
+      - name: Verify VIRTUAL_ENV matches output
+        run: |
+          if [ "$VIRTUAL_ENV" != "$UV_VENV" ]; then
+            echo "VIRTUAL_ENV does not match venv output: $VIRTUAL_ENV vs $UV_VENV"
+            exit 1
+          fi
+        shell: bash
+        env:
+          UV_VENV: ${{ steps.setup-uv.outputs.venv }}
+      - name: Verify venv location is runner.temp/custom-venv
+        run: |
+          python - <<'PY'
+          import os
+          from pathlib import Path
+
+          venv = Path(os.environ["VIRTUAL_ENV"]).resolve()
+          temp = Path(os.environ["RUNNER_TEMP"]).resolve()
+
+          if venv.name != "custom-venv":
+              raise SystemExit(f"Expected venv name 'custom-venv', got: {venv}")
+          if venv.parent != temp:
+              raise SystemExit(f"Expected venv under {temp}, got: {venv}")
+          if not venv.is_dir():
+              raise SystemExit(f"Venv directory does not exist: {venv}")
+          PY
+        shell: bash
+      - name: Verify packages can be installed
+        run: uv pip install pip
+        shell: bash
+      - name: Verify python runs from custom venv
+        run: |
+          python - <<'PY'
+          import sys
+          if "custom-venv" not in sys.executable:
+              raise SystemExit(f"Python is not running from custom venv: {sys.executable}")
+          PY
+        shell: bash
+
+  test-activate-environment-no-project:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Create incompatible pyproject.toml
+        run: |
+          cat > pyproject.toml <<'EOF'
+          [project]
+          name = "test-no-project"
+          version = "0.1.0"
+
+          [dependency-groups]
+          dev = [
+              "-e file:///${PROJECT_ROOT}/projects/pkg",
+          ]
+          EOF
+        shell: bash
+      - name: Install latest version with no-project
+        id: setup-uv
+        uses: ./
+        with:
+          python-version: 3.13.1t
+          activate-environment: true
+          no-project: true
+      - name: Verify packages can be installed
+        run: uv pip install pip
+        shell: bash
+      - name: Verify output venv is set
+        run: |
+          if [ -z "$UV_VENV" ]; then
+            echo "output venv is not set"
+            exit 1
+          fi
+          if [ ! -d "$UV_VENV" ]; then
+            echo "output venv not point to a directory: $UV_VENV"
+            exit 1
+          fi
+        shell: bash
+        env:
+          UV_VENV: ${{ steps.setup-uv.outputs.venv }}
+
+  test-debian-unstable:
+    runs-on: ubuntu-latest
+    container: debian:unstable
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install latest version
+        uses: ./
+        with:
+          enable-cache: true
+      - run: uv sync
+        working-directory: __tests__/fixtures/uv-project
+
+  test-musl:
+    runs-on: ubuntu-latest
+    container: alpine@sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec434943f8b # 3.24.1
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install latest version
+        id: setup-uv
+        uses: ./
+        with:
+          enable-cache: true
+      - name: Verify cache key contains alpine
+        run: |
+          echo "Cache key: $CACHE_KEY"
+          if echo "$CACHE_KEY" | grep -qv "alpine"; then
+            echo "Cache key does not contain 'alpine'"
+            exit 1
+          fi
+        shell: sh
+        env:
+          CACHE_KEY: ${{ steps.setup-uv.outputs.cache-key }}
+      - run: uv sync
+        working-directory: __tests__/fixtures/uv-project
+
+  test-cache-key-os-version:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            expected-os: "ubuntu-22.04"
+          - os: ubuntu-24.04
+            expected-os: "ubuntu-24.04"
+          - os: macos-14
+            expected-os: "macos-14"
+          - os: macos-15
+            expected-os: "macos-15"
+          - os: windows-2022
+            expected-os: "windows-2022"
+          - os: windows-2025
+            expected-os: "windows-2025"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Setup uv
+        id: setup-uv
+        uses: ./
+        with:
+          enable-cache: true
+      - name: Verify cache key contains OS version
+        run: |
+          echo "Cache key: $CACHE_KEY"
+          if [[ "$CACHE_KEY" != *"$EXPECTED_OS"* ]]; then
+            echo "Cache key does not contain expected OS version: $EXPECTED_OS"
+            exit 1
+          fi
+        shell: bash
+        env:
+          CACHE_KEY: ${{ steps.setup-uv.outputs.cache-key }}
+          EXPECTED_OS: ${{ matrix.expected-os }}
+
+  test-setup-cache:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        enable-cache: ["true", "false", "auto"]
+        os: ["ubuntu-latest", "windows-latest"]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Setup with cache
+        uses: ./
+        with:
+          enable-cache: ${{ matrix.enable-cache }}
+          cache-suffix: ${{ github.run_id }}-${{ github.run_attempt }}-test-setup-cache-${{ matrix.os }}-${{ matrix.enable-cache }}
+      - run: uv sync
+        working-directory: __tests__/fixtures/uv-project
+        shell: bash
+  test-restore-cache:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        enable-cache: ["true", "false", "auto"]
+        os: ["ubuntu-latest", "windows-latest"]
+    needs: test-setup-cache
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Restore with cache
+        id: restore
+        uses: ./
+        with:
+          enable-cache: ${{ matrix.enable-cache }}
+          cache-suffix: ${{ github.run_id }}-${{ github.run_attempt }}-test-setup-cache-${{ matrix.os }}-${{ matrix.enable-cache }}
+      - name: Cache was hit
+        if: ${{ matrix.enable-cache == 'true' || (matrix.enable-cache == 'auto' && matrix.os == 'ubuntu-latest') }}
+        run: |
+          if [ "$CACHE_HIT" != "true" ]; then
+            exit 1
+          fi
+        env:
+          CACHE_HIT: ${{ steps.restore.outputs.cache-hit }}
+        shell: bash
+      - name: Cache was not hit
+        if: ${{ matrix.enable-cache == 'false' }}
+        run: |
+          if [ "$CACHE_HIT" == "true" ]; then
+            exit 1
+          fi
+        env:
+          CACHE_HIT: ${{ steps.restore.outputs.cache-hit }}
+        shell: bash
+      - run: uv sync
+        working-directory: __tests__/fixtures/uv-project
+        shell: bash
+
+  test-setup-cache-requirements-txt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Setup with cache
+        uses: ./
+        with:
+          enable-cache: true
+          cache-suffix: ${{ github.run_id }}-${{ github.run_attempt }}-test-setup-cache-requirements-txt
+      - run: |
+          uv venv
+          uv pip install -r requirements.txt
+        working-directory: __tests__/fixtures/requirements-txt-project
+  test-restore-cache-requirements-txt:
+    runs-on: ubuntu-latest
+    needs: test-setup-cache-requirements-txt
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Restore with cache
+        id: restore
+        uses: ./
+        with:
+          enable-cache: true
+          cache-suffix: ${{ github.run_id }}-${{ github.run_attempt }}-test-setup-cache-requirements-txt
+      - name: Cache was hit
+        run: |
+          if [ "$CACHE_HIT" != "true" ]; then
+            exit 1
+          fi
+        env:
+          CACHE_HIT: ${{ steps.restore.outputs.cache-hit }}
+      - run: |
+          uv venv
+          uv pip install -r requirements.txt
+        working-directory: __tests__/fixtures/requirements-txt-project
+
+  test-setup-cache-dependency-glob:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Setup with cache
+        uses: ./
+        with:
+          enable-cache: true
+          cache-dependency-glob: |
+            __tests__/fixtures/uv-project/uv.lock
+            **/pyproject.toml
+          cache-suffix: ${{ github.run_id }}-${{ github.run_attempt }}-test-setup-cache-dependency-glob
+      - run: uv sync
+        working-directory: __tests__/fixtures/uv-project
+  test-restore-cache-dependency-glob:
+    runs-on: ubuntu-latest
+    needs: test-setup-cache-dependency-glob
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Change pyproject.toml
+        run: |
+          echo '[tool.uv]' >> __tests__/fixtures/uv-project/pyproject.toml
+          echo 'dev-dependencies = []' >> __tests__/fixtures/uv-project/pyproject.toml
+      - name: Restore with cache
+        id: restore
+        uses: ./
+        with:
+          enable-cache: true
+          cache-dependency-glob: |
+            __tests__/fixtures/uv-project/uv.lock
+            **/pyproject.toml
+          cache-suffix: ${{ github.run_id }}-${{ github.run_attempt }}-test-setup-cache-dependency-glob
+          ignore-nothing-to-cache: true
+      - name: Cache was not hit
+        run: |
+          if [ "$CACHE_HIT" == "true" ]; then
+            exit 1
+          fi
+        env:
+          CACHE_HIT: ${{ steps.restore.outputs.cache-hit }}
+
+  test-setup-cache-save-cache-false:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Setup with cache
+        uses: ./
+        with:
+          enable-cache: true
+          save-cache: false
+          cache-suffix: ${{ github.run_id }}-${{ github.run_attempt }}-test-setup-cache-save-cache-false
+      - run: uv sync
+        working-directory: __tests__/fixtures/uv-project
+        shell: bash
+  test-restore-cache-save-cache-false:
+    runs-on: ubuntu-latest
+    needs: test-setup-cache-save-cache-false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Restore with cache
+        id: restore
+        uses: ./
+        with:
+          enable-cache: true
+          cache-suffix: ${{ github.run_id }}-${{ github.run_attempt }}-test-setup-cache-save-cache-false
+      - name: Cache was not hit
+        run: |
+          if [ "$CACHE_HIT" == "true" ]; then
+            exit 1
+          fi
+        env:
+          CACHE_HIT: ${{ steps.restore.outputs.cache-hit }}
+
+  test-setup-cache-restore-cache-false:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Setup with cache
+        uses: ./
+        with:
+          enable-cache: true
+          cache-suffix: ${{ github.run_id }}-${{ github.run_attempt }}-test-setup-cache-restore-cache-false
+      - run: uv sync
+        working-directory: __tests__/fixtures/uv-project
+        shell: bash
+  test-restore-cache-restore-cache-false:
+    runs-on: ubuntu-latest
+    needs: test-setup-cache-restore-cache-false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Restore with cache
+        id: restore
+        uses: ./
+        with:
+          enable-cache: true
+          restore-cache: false
+          cache-suffix: ${{ github.run_id }}-${{ github.run_attempt }}-test-setup-cache-restore-cache-false
+      - name: Cache was not hit
+        run: |
+          if [ "$CACHE_HIT" == "true" ]; then
+            exit 1
+          fi
+        env:
+          CACHE_HIT: ${{ steps.restore.outputs.cache-hit }}
+
+  test-cache-local:
+    strategy:
+      matrix:
+        inputs:
+          - os: ubuntu-latest
+            expected-cache-dir: "/home/runner/work/_temp/setup-uv-cache"
+          - os: windows-latest
+            expected-cache-dir: "D:\\a\\_temp\\setup-uv-cache"
+    runs-on: ${{ matrix.inputs.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Setup with cache
+        uses: ./
+        with:
+          enable-cache: true
+          cache-suffix: ${{ github.run_id }}-${{ github.run_attempt }}-test-cache-local
+      - run: |
+          if [ "$UV_CACHE_DIR" != "$EXPECTED_CACHE_DIR" ]; then
+            echo "UV_CACHE_DIR is not set to the expected value: $UV_CACHE_DIR"
+            exit 1
+          fi
+        shell: bash
+        env:
+          EXPECTED_CACHE_DIR: ${{ matrix.inputs.expected-cache-dir }}
+
+  test-cache-local-cache-disabled:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Setup without cache
+        uses: ./
+        with:
+          enable-cache: false
+
+      - name: Check UV_CACHE_DIR is not set
+        run: |
+          if [ -n "$UV_CACHE_DIR" ]; then
+            echo "UV_CACHE_DIR should not be set when cache is disabled: $UV_CACHE_DIR"
+            exit 1
+          fi
+        shell: bash
+
+  test-cache-local-cache-disabled-but-explicit-path:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Setup without cache
+        uses: ./
+        with:
+          enable-cache: false
+          cache-local-path: /tmp/uv-cache-disabled
+
+      - name: Check UV_CACHE_DIR is set
+        run: |
+          if [ "$UV_CACHE_DIR" != "/tmp/uv-cache-disabled" ]; then
+            echo "UV_CACHE_DIR should be set when cache is disabled but explicit path is provided"
+            exit 1
+          fi
+        shell: bash
+
+  test-no-python-version:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Fake pyproject.toml at root
+        run: cp __tests__/fixtures/old-python-constraint-project/pyproject.toml pyproject.toml
+      - name: Setup with cache
+        uses: ./
+        with:
+          enable-cache: true
+      - run: uv sync
+        working-directory: __tests__/fixtures/old-python-constraint-project
+
+  test-custom-manifest-file:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install from custom manifest file
+        uses: ./
+        with:
+          manifest-file: "https://raw.githubusercontent.com/astral-sh/setup-uv/${{ github.ref }}/__tests__/download/custom-manifest.ndjson"
+      - run: uv sync
+        working-directory: __tests__/fixtures/uv-project
+      - name: Correct version gets installed
+        run: |
+          if [ "$(uv --version)" != "uv 0.9.26" ]; then
+            echo "Wrong uv version: $(uv --version)"
+            exit 1
+          fi
+
+  test-download-from-astral-mirror-false:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install with download-from-astral-mirror disabled
+        id: setup-uv
+        uses: ./
+        with:
+          download-from-astral-mirror: false
+      - name: Verify uv is installed
+        run: uv --version
+
+  test-absolute-path:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Create requirements.txt
+        run: echo "uv==0.6.17" > /tmp/setup-uv-requirements.txt
+      - name: Install from requirements file
+        id: setup-uv
+        uses: ./
+        with:
+          version-file: "/tmp/setup-uv-requirements.txt"
+      - name: Correct version gets installed
+        run: |
+          if [ "$(uv --version)" != "uv 0.6.17" ]; then
+            echo "Wrong uv version: $(uv --version)"
+            exit 1
+          fi
+
+  test-relative-path:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: mkdir
+        run: mkdir -p /tmp/setup-uv-test-relative-path
+      - name: Create requirements.txt
+        run: echo "uv==0.6.17" > /tmp/setup-uv-test-relative-path/setup-uv-requirements.txt
+      - name: Install from requirements file
+        id: setup-uv
+        uses: ./
+        with:
+          version-file: "./setup-uv-requirements.txt"
+          working-directory: "/tmp/setup-uv-test-relative-path"
+          cache-dependency-glob: "./setup-uv-requirements.txt"
+      - name: Correct version gets installed
+        run: |
+          if [ "$(uv --version)" != "uv 0.6.17" ]; then
+            echo "Wrong uv version: $(uv --version)"
+            exit 1
+          fi
+
+  test-cache-prune-force:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Setup uv
+        uses: ./
+        with:
+          cache-suffix: ${{ github.run_id }}-${{ github.run_attempt }}-test-cache-prune-force
+      - name: Create long running python script
+        run: |
+          echo 'import time' > __tests__/fixtures/uv-project/long-running.py
+          echo 'time.sleep(300)' >> __tests__/fixtures/uv-project/long-running.py
+      - run: uv run long-running.py &
+        working-directory: __tests__/fixtures/uv-project
+
+  test-cache-dir-from-file:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Verify uv cache dir is not populated
+        run: |
+          if [ -f "/tmp/pyproject-toml-defined-cache-path/CACHEDIR.TAG" ]; then
+            echo "Cache dir should not exist"
+            exit 1
+          fi
+      - name: Setup uv
+        uses: ./
+        with:
+          working-directory: __tests__/fixtures/cache-dir-defined-project
+      - run: uv sync
+        working-directory: __tests__/fixtures/cache-dir-defined-project
+      - name: Verify uv cache dir is populated
+        run: |
+          if [ ! -f "/tmp/pyproject-toml-defined-cache-path/CACHEDIR.TAG" ]; then
+            echo "Cache dir should exist"
+            exit 1
+          fi
+
+  test-cache-python-missing-managed-install-dir:
+    runs-on: ubuntu-latest
+    env:
+      UV_PYTHON_INSTALL_DIR: /tmp/missing-uv-python
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Setup uv with cache and python cache enabled
+        uses: ./
+        with:
+          enable-cache: true
+          cache-python: true
+          python-version: "3.12"
+          cache-local-path: /tmp/setup-uv-cache
+          cache-suffix: ${{ github.run_id }}-${{ github.run_attempt }}-test-cache-python-missing-managed-install-dir
+      - name: Ensure uv cache dir exists so only python-cache behavior is tested
+        run: uv sync
+        working-directory: __tests__/fixtures/uv-project
+        shell: bash
+      - name: Ensure managed Python install dir does not exist and this does not break caching
+        run: rm -rf "$UV_PYTHON_INSTALL_DIR"
+
+  test-cache-python-installs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Verify Python install dir is not populated
+        run: |
+          if [ -d /home/runner/work/_temp/uv-python-dir ]; then
+            echo "Python install dir should not exist"
+            exit 1
+          fi
+      - name: Setup uv with cache
+        uses: ./
+        with:
+          enable-cache: true
+          cache-python: true
+          cache-suffix: ${{ github.run_id }}-${{ github.run_attempt }}-test-cache-python-installs
+      - run: uv sync --managed-python
+        working-directory: __tests__/fixtures/uv-project
+      - name: Verify Python install dir exists
+        run: |
+          if [ ! -d /home/runner/work/_temp/uv-python-dir ]; then
+            echo "Python install dir should exist"
+            exit 1
+          fi
+  test-restore-python-installs:
+    runs-on: ubuntu-latest
+    needs: test-cache-python-installs
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Verify Python install dir does not exist
+        run: |
+          if [ -d /home/runner/work/_temp/uv-python-dir ]; then
+            echo "Python install dir should not exist"
+            exit 1
+          fi
+      - name: Restore with cache
+        id: restore
+        uses: ./
+        with:
+          enable-cache: true
+          cache-python: true
+          cache-suffix: ${{ github.run_id }}-${{ github.run_attempt }}-test-cache-python-installs
+      - name: Verify Python install dir exists
+        run: |
+          if [ ! -d /home/runner/work/_temp/uv-python-dir ]; then
+            echo "Python install dir should exist"
+            exit 1
+          fi
+      - name: Cache was hit
+        run: |
+          if [ "$CACHE_HIT" != "true" ]; then
+            exit 1
+          fi
+        env:
+          CACHE_HIT: ${{ steps.restore.outputs.python-cache-hit }}
+      - run: uv sync --managed-python
+        working-directory: __tests__/fixtures/uv-project
+
+  test-python-install-dir:
+    strategy:
+      matrix:
+        inputs:
+          - os: ubuntu-latest
+            expected-python-dir: "/home/runner/work/_temp/uv-python-dir"
+          - os: windows-latest
+            expected-python-dir: "D:\\a\\_temp\\uv-python-dir"
+    runs-on: ${{ matrix.inputs.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install latest version
+        id: setup-uv
+        uses: ./
+      - name: Check Python dir is expected dir
+        run: |
+          if [ "$UV_PYTHON_INSTALL_DIR" != "$EXPECTED_PYTHON_DIR" ]; then
+            echo "Wrong UV_PYTHON_INSTALL_DIR: $UV_PYTHON_INSTALL_DIR"
+            exit 1
+          fi
+        shell: bash
+        env:
+          EXPECTED_PYTHON_DIR: ${{ matrix.inputs.expected-python-dir }}
+      - name: Install python works
+        run: uv python install
+
+  test-act:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install act
+        run: gh extension install https://github.com/nektos/gh-act
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: Run test-uvx with act
+        run: gh act -j test-uvx -P ubuntu-latest=catthehacker/ubuntu:act-latest
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+  test-workflow-run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install act
+        run: gh extension install https://github.com/nektos/gh-act
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: Verify workflow_run disables automatic caching with act
+        run: |
+          gh act workflow_run \
+            -W __tests__/workflows/workflow-run.yml \
+            -P ubuntu-latest=catthehacker/ubuntu:act-latest \
+            --env RUNNER_ENVIRONMENT=github-hosted
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+  validate-typings:
+    runs-on: "ubuntu-latest"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Validate typings
+        uses: typesafegithub/github-actions-typing@9ddf35b71a482be7d8922b28e8d00df16b77e315 # v2.2.2
+
+  all-tests-passed:
+    runs-on: ubuntu-latest
+    needs:
+      - lint
+      - test-default-version
+      - test-uv-no-modify-path
+      - test-specific-version
+      - test-latest-version
+      - test-from-working-directory-version
+      - test-malformed-pyproject-file-fallback
+      - test-version-file-version
+      - test-tool-versions-python-version
+      - test-checksum
+      - test-with-explicit-token
+      - test-uvx
+      - test-tool-install
+      - test-python-version
+      - test-activate-environment
+      - test-activate-environment-custom-path
+      - test-activate-environment-no-project
+      - test-debian-unstable
+      - test-musl
+      - test-cache-key-os-version
+      - test-cache-local
+      - test-cache-local-cache-disabled
+      - test-cache-local-cache-disabled-but-explicit-path
+      - test-setup-cache
+      - test-restore-cache
+      - test-setup-cache-requirements-txt
+      - test-restore-cache-requirements-txt
+      - test-setup-cache-dependency-glob
+      - test-restore-cache-dependency-glob
+      - test-setup-cache-save-cache-false
+      - test-restore-cache-save-cache-false
+      - test-setup-cache-restore-cache-false
+      - test-restore-cache-restore-cache-false
+      - test-no-python-version
+      - test-custom-manifest-file
+      - test-download-from-astral-mirror-false
+      - test-absolute-path
+      - test-relative-path
+      - test-cache-prune-force
+      - test-cache-dir-from-file
+      - test-cache-python-missing-managed-install-dir
+      - test-cache-python-installs
+      - test-restore-python-installs
+      - test-python-install-dir
+      - test-act
+      - test-workflow-run
+      - validate-typings
+    if: always()
+    steps:
+      - name: All tests passed
+        env:
+          ALL_PASSED: ${{ !(contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')) }}
+          EXIT_CODE: ${{ (contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')) && 1 || 0 }}
+        run: |
+          echo "All jobs passed: $ALL_PASSED"
+          # shellcheck disable=SC2242
+          exit "$EXIT_CODE"

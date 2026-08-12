@@ -1,0 +1,46 @@
+name: Test activate-environment feature
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: setup-uv
+        uses: .
+        with:
+          version: "latest"
+          enable-cache: "false"
+          activate-environment: "true"
+          no-project: "true"
+      - name: Assert venv output is set
+        env:
+          VENV: ${{ steps.setup-uv.outputs.venv }}
+        run: |
+          echo "venv: $VENV"
+          if [ -z "$VENV" ]; then
+            echo "FAIL: venv output is empty"
+            exit 1
+          fi
+          echo "PASS: venv output is '$VENV'"
+      - name: Assert venv directory exists
+        env:
+          VENV: ${{ steps.setup-uv.outputs.venv }}
+        run: |
+          echo "checking venv directory: $VENV"
+          if [ ! -d "$VENV" ]; then
+            echo "FAIL: venv directory does not exist at '$VENV'"
+            exit 1
+          fi
+          echo "PASS: venv directory exists"
+      - name: Assert python is available in venv
+        env:
+          VENV: ${{ steps.setup-uv.outputs.venv }}
+        run: |
+          PYTHON_BIN="$VENV/bin/python"
+          echo "checking python binary: $PYTHON_BIN"
+          if [ ! -f "$PYTHON_BIN" ] && [ ! -L "$PYTHON_BIN" ]; then
+            echo "FAIL: python binary not found in venv at '$PYTHON_BIN'"
+            exit 1
+          fi
+          echo "PASS: python binary found in venv"
