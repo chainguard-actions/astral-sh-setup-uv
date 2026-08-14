@@ -9,6 +9,7 @@ Hardened by [Chainguard](https://www.chainguard.dev) from the upstream action at
 | Version | Tag | Upstream commit |
 |---------|-----|-----------------|
 | v10.0.0 | [`v10.0.0`](https://github.com/chainguard-actions/astral-sh-setup-uv/tree/v10.0.0) | [`ae62891`](https://github.com/astral-sh/setup-uv/commit/ae62891fec2bb8e7d6c99fc78c9fec3a63790f8d) |
+| v10.0.1 | [`v10.0.1`](https://github.com/chainguard-actions/astral-sh-setup-uv/tree/v10.0.1) | [`20cfd1b`](https://github.com/astral-sh/setup-uv/commit/20cfd1bf945f4377ade1205e4dbc17946fc9a30d) |
 | v3 | [`v3`](https://github.com/chainguard-actions/astral-sh-setup-uv/tree/v3) | [`caf0cab`](https://github.com/astral-sh/setup-uv/commit/caf0cab7a618c569241d31dcd442f54681755d39) |
 | v3.2 | [`v3.2`](https://github.com/chainguard-actions/astral-sh-setup-uv/tree/v3.2) | [`caf0cab`](https://github.com/astral-sh/setup-uv/commit/caf0cab7a618c569241d31dcd442f54681755d39) |
 | v3.2.4 | [`v3.2.4`](https://github.com/chainguard-actions/astral-sh-setup-uv/tree/v3.2.4) | [`caf0cab`](https://github.com/astral-sh/setup-uv/commit/caf0cab7a618c569241d31dcd442f54681755d39) |
