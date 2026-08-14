@@ -1,0 +1,211 @@
+import { beforeEach, describe, expect, it, jest } from "@jest/globals";
+
+const mockReadFileSync = jest.fn();
+const mockWarning = jest.fn();
+
+jest.unstable_mockModule("node:fs", () => ({
+  default: {
+    readFileSync: mockReadFileSync,
+  },
+}));
+
+jest.unstable_mockModule("@actions/core", () => ({
+  warning: mockWarning,
+}));
+
+async function getVersionFromToolVersions(filePath: string) {
+  const { getUvVersionFromToolVersions } = await import(
+    "../../src/version/tool-versions-file"
+  );
+
+  return getUvVersionFromToolVersions(filePath);
+}
+
+async function getPythonVersionFromToolVersions(filePath: string) {
+  const module = await import("../../src/version/tool-versions-file");
+  return module.getPythonVersionFromToolVersions(filePath);
+}
+
+describe("getUvVersionFromToolVersions", () => {
+  beforeEach(() => {
+    jest.resetModules();
+    jest.clearAllMocks();
+  });
+
+  it("should return undefined for non-.tool-versions files", async () => {
+    const result = await getVersionFromToolVersions("package.json");
+    expect(result).toBeUndefined();
+    expect(mockReadFileSync).not.toHaveBeenCalled();
+  });
+
+  it("should return version for valid uv entry", async () => {
+    const fileContent = "python 3.11.0\nuv 0.1.0\nnodejs 18.0.0";
+    mockReadFileSync.mockReturnValue(fileContent);
+
+    const result = await getVersionFromToolVersions(".tool-versions");
+
+    expect(result).toBe("0.1.0");
+    expect(mockReadFileSync).toHaveBeenCalledWith(".tool-versions", "utf8");
+  });
+
+  it("should return version for uv entry with v prefix", async () => {
+    const fileContent = "uv v0.2.0";
+    mockReadFileSync.mockReturnValue(fileContent);
+
+    const result = await getVersionFromToolVersions(".tool-versions");
+
+    expect(result).toBe("0.2.0");
+  });
+
+  it("should handle whitespace around uv entry", async () => {
+    const fileContent = "  uv   0.3.0  ";
+    mockReadFileSync.mockReturnValue(fileContent);
+
+    const result = await getVersionFromToolVersions(".tool-versions");
+
+    expect(result).toBe("0.3.0");
+  });
+
+  it("should skip comments", async () => {
+    const fileContent = "# uv 0.1.0\npython 3.11.0\nuv 0.2.0 # inline comment";
+    mockReadFileSync.mockReturnValue(fileContent);
+
+    const result = await getVersionFromToolVersions(".tool-versions");
+
+    expect(result).toBe("0.2.0");
+  });
+
+  it("should return first matching uv version", async () => {
+    const fileContent = "uv 0.1.0\npython 3.11.0\nuv 0.2.0";
+    mockReadFileSync.mockReturnValue(fileContent);
+
+    const result = await getVersionFromToolVersions(".tool-versions");
+
+    expect(result).toBe("0.1.0");
+  });
+
+  it("should return undefined when no uv entry found", async () => {
+    const fileContent = "python 3.11.0\nnodejs 18.0.0";
+    mockReadFileSync.mockReturnValue(fileContent);
+
+    const result = await getVersionFromToolVersions(".tool-versions");
+
+    expect(result).toBeUndefined();
+  });
+
+  it("should return undefined for empty file", async () => {
+    mockReadFileSync.mockReturnValue("");
+
+    const result = await getVersionFromToolVersions(".tool-versions");
+
+    expect(result).toBeUndefined();
+  });
+
+  it("should warn and return undefined for ref syntax", async () => {
+    const fileContent = "uv ref:main";
+    mockReadFileSync.mockReturnValue(fileContent);
+
+    const result = await getVersionFromToolVersions(".tool-versions");
+
+    expect(result).toBeUndefined();
+    expect(mockWarning).toHaveBeenCalledWith(
+      "The ref syntax of .tool-versions is not supported. Please use a released version instead.",
+    );
+  });
+
+  it.each(["/my/python/exploit", "my/exploited/uv", "C:\\exploited\\uv"])(
+    "should warn and return undefined for path %s",
+    async (version) => {
+      mockReadFileSync.mockReturnValue(`uv ${version}`);
+
+      const result = await getVersionFromToolVersions(".tool-versions");
+
+      expect(result).toBeUndefined();
+      expect(mockWarning).toHaveBeenCalledWith(
+        `The uv version ${version} in .tool-versions is not supported. Paths are not allowed.`,
+      );
+    },
+  );
+
+  it("should handle file path with .tool-versions extension", async () => {
+    const fileContent = "uv 0.1.0";
+    mockReadFileSync.mockReturnValue(fileContent);
+
+    const result = await getVersionFromToolVersions("path/to/.tool-versions");
+
+    expect(result).toBe("0.1.0");
+    expect(mockReadFileSync).toHaveBeenCalledWith(
+      "path/to/.tool-versions",
+      "utf8",
+    );
+  });
+});
+
+describe("getPythonVersionFromToolVersions", () => {
+  beforeEach(() => {
+    jest.resetModules();
+    jest.clearAllMocks();
+  });
+
+  it("should return version for a valid Python entry", async () => {
+    mockReadFileSync.mockReturnValue(
+      "nodejs 24.0.0\r\npython v3.13.1t # use free-threaded Python\r\nuv 0.12.3",
+    );
+
+    const result = await getPythonVersionFromToolVersions(".tool-versions");
+
+    expect(result).toBe("3.13.1t");
+  });
+
+  it("should return the first matching Python version", async () => {
+    mockReadFileSync.mockReturnValue("python 3.12\npython 3.13");
+
+    const result = await getPythonVersionFromToolVersions(".tool-versions");
+
+    expect(result).toBe("3.12");
+  });
+
+  it("should return undefined when no Python entry is found", async () => {
+    mockReadFileSync.mockReturnValue("uv 0.12.3\nnodejs 24.0.0");
+
+    const result = await getPythonVersionFromToolVersions(".tool-versions");
+
+    expect(result).toBeUndefined();
+  });
+
+  it("should warn and return undefined for multiple Python versions", async () => {
+    mockReadFileSync.mockReturnValue("python 3.13 3.12 system");
+
+    const result = await getPythonVersionFromToolVersions(".tool-versions");
+
+    expect(result).toBeUndefined();
+    expect(mockWarning).toHaveBeenCalledWith(
+      "Multiple Python versions in .tool-versions are not supported. The Python entry will be ignored.",
+    );
+  });
+
+  it.each([
+    "ref:main",
+    "path:~/src/python",
+    "system",
+    "/my/python/exploit",
+    "my/exploited/python",
+    "C:\\exploited\\python",
+  ])("should warn and return undefined for %s", async (version) => {
+    mockReadFileSync.mockReturnValue(`python ${version}`);
+
+    const result = await getPythonVersionFromToolVersions(".tool-versions");
+
+    expect(result).toBeUndefined();
+    expect(mockWarning).toHaveBeenCalledWith(
+      `The Python version ${version} in .tool-versions is not supported. The Python entry will be ignored.`,
+    );
+  });
+
+  it("should return undefined for non-.tool-versions files", async () => {
+    const result = await getPythonVersionFromToolVersions(".python-version");
+
+    expect(result).toBeUndefined();
+    expect(mockReadFileSync).not.toHaveBeenCalled();
+  });
+});

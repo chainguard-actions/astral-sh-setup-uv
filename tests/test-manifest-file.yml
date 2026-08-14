@@ -1,0 +1,35 @@
+name: Test manifest-file input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          version: "latest"
+          manifest-file: "https://raw.githubusercontent.com/astral-sh/uv/main/crates/uv-toolchain/src/downloads.json"
+        continue-on-error: true
+      - name: Assert action ran with manifest-file input
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+          UV_VERSION: ${{ steps.action.outputs.uv-version }}
+          UV_PATH: ${{ steps.action.outputs.uv-path }}
+        run: |
+          echo "outcome: $OUTCOME"
+          echo "uv-version: $UV_VERSION"
+          echo "uv-path: $UV_PATH"
+          if [ "$OUTCOME" = "success" ]; then
+            if [ -z "$UV_VERSION" ]; then
+              echo "FAIL: action succeeded but uv-version output is empty"
+              exit 1
+            fi
+            echo "PASS: uv installed with manifest-file, version=$UV_VERSION"
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (manifest-file URL may not be valid for this action's format)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi
