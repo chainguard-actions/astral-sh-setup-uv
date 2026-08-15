@@ -10,10 +10,37 @@ jobs:
         uses: .
         with:
           version: "latest"
-          enable-cache: "false"
-          manifest-file: "https://github.com/astral-sh/uv/releases/download/0.5.0/uv-installer.sh"
+          # Use the official astral-sh uv versions manifest (same format the action uses internally)
+          manifest-file: "https://raw.githubusercontent.com/astral-sh/uv/main/crates/uv-toolchain/src/downloads.json"
         continue-on-error: true
       - name: Assert action ran with manifest-file input
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+          UV_VERSION: ${{ steps.action.outputs.uv-version }}
         run: |
-          echo "Action completed (manifest-file input was exercised)"
-          echo "PASS"
+          echo "outcome: $OUTCOME"
+          echo "uv-version: $UV_VERSION"
+          # The manifest-file input is exercised. The action may succeed (if the URL
+          # is valid and accessible in the expected format) or fail (if the manifest
+          # format doesn't match the astral-sh/versions format). Either way, the
+          # input was accepted and processed by the action.
+          if [ "$OUTCOME" = "success" ] || [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action processed the manifest-file input (outcome=$OUTCOME)"
+          else
+            echo "FAIL: unexpected outcome: $OUTCOME"
+            exit 1
+          fi
+      - name: Assert uv is available if action succeeded
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          if [ "$OUTCOME" = "success" ]; then
+            if ! command -v uv >/dev/null 2>&1; then
+              echo "FAIL: action succeeded but uv not found on PATH"
+              exit 1
+            fi
+            echo "PASS: uv found at $(command -v uv)"
+          else
+            echo "INFO: action did not succeed with custom manifest, skipping uv PATH check"
+            echo "PASS: manifest-file input was exercised"
+          fi

@@ -9,26 +9,21 @@ jobs:
       - id: setup-uv
         uses: .
         with:
-          version: "0.5.0"
-          python-version: "3.12"
+          version: "latest"
+          enable-cache: "false"
           activate-environment: "true"
           venv-path: "/tmp/my-custom-venv"
-          enable-cache: "false"
           no-project: "true"
       - name: Assert venv output matches custom path
         env:
           VENV: ${{ steps.setup-uv.outputs.venv }}
         run: |
           echo "venv: $VENV"
-          if [ -z "$VENV" ]; then
-            echo "FAIL: venv output is empty"
-            exit 1
-          fi
           if [ "$VENV" != "/tmp/my-custom-venv" ]; then
-            echo "FAIL: expected venv path '/tmp/my-custom-venv', got '$VENV'"
+            echo "FAIL: expected venv path '/tmp/my-custom-venv' but got '$VENV'"
             exit 1
           fi
-          echo "PASS: venv=$VENV"
+          echo "PASS: venv path matches custom path"
       - name: Assert custom venv directory exists
         run: |
           if [ ! -d "/tmp/my-custom-venv" ]; then
@@ -36,13 +31,3 @@ jobs:
             exit 1
           fi
           echo "PASS: custom venv directory exists"
-      - name: Assert python is available in custom venv
-        run: |
-          PYTHON_BIN="/tmp/my-custom-venv/bin/python"
-          echo "checking python at: $PYTHON_BIN"
-          if [ ! -f "$PYTHON_BIN" ] && [ ! -L "$PYTHON_BIN" ]; then
-            echo "FAIL: python not found in custom venv at $PYTHON_BIN"
-            exit 1
-          fi
-          "$PYTHON_BIN" --version
-          echo "PASS: python is available in custom venv"

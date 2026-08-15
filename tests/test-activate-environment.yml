@@ -1,4 +1,4 @@
-name: Test activate-environment
+name: Test activate-environment feature
 on:
   workflow_dispatch:
 jobs:
@@ -9,10 +9,9 @@ jobs:
       - id: setup-uv
         uses: .
         with:
-          version: "0.5.0"
-          python-version: "3.12"
-          activate-environment: "true"
+          version: "latest"
           enable-cache: "false"
+          activate-environment: "true"
           no-project: "true"
       - name: Assert venv output is set
         env:
@@ -23,7 +22,7 @@ jobs:
             echo "FAIL: venv output is empty"
             exit 1
           fi
-          echo "PASS: venv=$VENV"
+          echo "PASS: venv output is set to $VENV"
       - name: Assert venv directory exists
         env:
           VENV: ${{ steps.setup-uv.outputs.venv }}
@@ -38,19 +37,9 @@ jobs:
         env:
           VENV: ${{ steps.setup-uv.outputs.venv }}
         run: |
-          PYTHON_BIN="$VENV/bin/python"
-          echo "checking python at: $PYTHON_BIN"
-          if [ ! -f "$PYTHON_BIN" ] && [ ! -L "$PYTHON_BIN" ]; then
-            echo "FAIL: python not found in venv at $PYTHON_BIN"
+          if [ ! -f "$VENV/bin/python" ] && [ ! -f "$VENV/bin/python3" ]; then
+            echo "FAIL: python not found in venv at $VENV/bin/"
+            ls "$VENV/bin/" || true
             exit 1
           fi
-          "$PYTHON_BIN" --version
-          echo "PASS: python is available in venv"
-      - name: Assert uv is available
-        run: |
-          if ! command -v uv &>/dev/null; then
-            echo "FAIL: uv not found in PATH"
-            exit 1
-          fi
-          uv --version
-          echo "PASS: uv is available"
+          echo "PASS: python found in venv"

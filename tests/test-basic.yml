@@ -1,4 +1,4 @@
-name: Test basic usage (latest uv)
+name: Test basic uv installation (latest)
 on:
   workflow_dispatch:
 jobs:
@@ -9,6 +9,7 @@ jobs:
       - id: setup-uv
         uses: .
         with:
+          version: "latest"
           enable-cache: "false"
       - name: Assert uv-version output is set
         env:
@@ -29,7 +30,11 @@ jobs:
             echo "FAIL: uv-path output is empty"
             exit 1
           fi
-          echo "PASS: uv-path=$UV_PATH"
+          if [ ! -f "$UV_PATH" ]; then
+            echo "FAIL: uv binary not found at $UV_PATH"
+            exit 1
+          fi
+          echo "PASS: uv binary exists at $UV_PATH"
       - name: Assert uvx-path output is set
         env:
           UVX_PATH: ${{ steps.setup-uv.outputs.uvx-path }}
@@ -39,12 +44,16 @@ jobs:
             echo "FAIL: uvx-path output is empty"
             exit 1
           fi
-          echo "PASS: uvx-path=$UVX_PATH"
-      - name: Assert uv binary is executable
-        run: |
-          if ! command -v uv &>/dev/null; then
-            echo "FAIL: uv not found in PATH"
+          if [ ! -f "$UVX_PATH" ]; then
+            echo "FAIL: uvx binary not found at $UVX_PATH"
             exit 1
           fi
+          echo "PASS: uvx binary exists at $UVX_PATH"
+      - name: Assert uv is runnable
+        run: |
           uv --version
-          echo "PASS: uv is available"
+          if [ $? -ne 0 ]; then
+            echo "FAIL: uv command failed"
+            exit 1
+          fi
+          echo "PASS: uv is runnable"

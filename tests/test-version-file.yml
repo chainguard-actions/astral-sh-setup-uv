@@ -1,0 +1,39 @@
+name: Test version-file input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Create uv.toml with version constraint
+        run: |
+          mkdir -p /tmp/uv-version-test
+          cat > /tmp/uv-version-test/uv.toml << 'EOF'
+          required-version = "0.5.1"
+          EOF
+          cat /tmp/uv-version-test/uv.toml
+      - id: setup-uv
+        uses: .
+        with:
+          version-file: "/tmp/uv-version-test/uv.toml"
+          enable-cache: "false"
+      - name: Assert uv-version output matches version from file
+        env:
+          UV_VERSION: ${{ steps.setup-uv.outputs.uv-version }}
+        run: |
+          echo "uv-version: $UV_VERSION"
+          if [ -z "$UV_VERSION" ]; then
+            echo "FAIL: uv-version output is empty"
+            exit 1
+          fi
+          echo "PASS: uv-version=$UV_VERSION"
+      - name: Assert uv binary reports correct version
+        run: |
+          INSTALLED=$(uv --version | awk '{print $2}')
+          echo "installed version: $INSTALLED"
+          if [ "$INSTALLED" != "0.5.1" ]; then
+            echo "FAIL: expected uv 0.5.1 but got $INSTALLED"
+            exit 1
+          fi
+          echo "PASS: uv version matches version from file"
