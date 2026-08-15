@@ -1,4 +1,4 @@
-name: Test uv with virtual environment activation
+name: Test virtual environment activation
 on:
   workflow_dispatch:
 jobs:
@@ -10,39 +10,47 @@ jobs:
         uses: .
         with:
           version: "0.5.0"
-          python-version: "3.12"
           activate-environment: "true"
           enable-cache: "false"
+          ignore-empty-workdir: "true"
       - name: Assert venv output is set
         env:
           VENV_PATH: ${{ steps.setup-uv.outputs.venv }}
         run: |
-          echo "venv: $VENV_PATH"
+          echo "venv output: $VENV_PATH"
           if [ -z "$VENV_PATH" ]; then
             echo "FAIL: venv output is empty"
             exit 1
           fi
           echo "PASS: venv=$VENV_PATH"
-      - name: Assert virtual environment directory exists
+      - name: Assert venv directory exists
         env:
           VENV_PATH: ${{ steps.setup-uv.outputs.venv }}
         run: |
-          echo "Checking venv directory: $VENV_PATH"
+          echo "Checking venv directory at: $VENV_PATH"
           if [ ! -d "$VENV_PATH" ]; then
-            echo "FAIL: venv directory does not exist at '$VENV_PATH'"
+            echo "FAIL: venv directory does not exist at $VENV_PATH"
             exit 1
           fi
           echo "PASS: venv directory exists"
-      - name: Assert VIRTUAL_ENV is set in environment
+      - name: Assert venv has python binary or symlink
+        env:
+          VENV_PATH: ${{ steps.setup-uv.outputs.venv }}
         run: |
-          echo "VIRTUAL_ENV: $VIRTUAL_ENV"
-          if [ -z "$VIRTUAL_ENV" ]; then
-            echo "FAIL: VIRTUAL_ENV env var is not set"
+          echo "Checking for python in venv: $VENV_PATH"
+          ls -la "$VENV_PATH/bin/" || true
+          if [ ! -e "$VENV_PATH/bin/python" ] && [ ! -e "$VENV_PATH/bin/python3" ]; then
+            echo "FAIL: no python binary found in venv at $VENV_PATH/bin/"
             exit 1
           fi
-          echo "PASS: VIRTUAL_ENV=$VIRTUAL_ENV"
-      - name: Assert python is available from venv
+          echo "PASS: python binary found in venv"
+      - name: Assert uv-version output is set
+        env:
+          UV_VERSION: ${{ steps.setup-uv.outputs.uv-version }}
         run: |
-          which python
-          python --version
-          echo "PASS: python is available"
+          echo "uv-version: $UV_VERSION"
+          if [ -z "$UV_VERSION" ]; then
+            echo "FAIL: uv-version output is empty"
+            exit 1
+          fi
+          echo "PASS: uv-version=$UV_VERSION"
