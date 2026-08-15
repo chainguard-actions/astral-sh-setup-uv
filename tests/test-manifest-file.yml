@@ -6,25 +6,38 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - id: setup-uv
+      - id: action
         uses: .
         with:
-          version: "latest"
-          manifest-file: "https://raw.githubusercontent.com/astral-sh/uv/main/crates/uv-toolchain/src/downloads.json"
+          version: "0.5.0"
+          manifest-file: "https://raw.githubusercontent.com/astral-sh/setup-uv/main/versions.json"
           enable-cache: "false"
         continue-on-error: true
       - name: Assert action ran with manifest-file input
         env:
-          UV_VERSION: ${{ steps.setup-uv.outputs.uv-version }}
-          OUTCOME: ${{ steps.setup-uv.outcome }}
+          UV_VERSION: ${{ steps.action.outputs.uv-version }}
+          OUTCOME: ${{ steps.action.outcome }}
         run: |
           echo "outcome: $OUTCOME"
           echo "uv-version: $UV_VERSION"
-          # The manifest URL may or may not be valid for this action's format,
-          # but the input should be accepted and the action should run
+          # The action either succeeds (manifest URL valid and version found) or fails.
+          # Either way, the input was accepted and processed.
           if [ "$OUTCOME" = "success" ] || [ "$OUTCOME" = "failure" ]; then
-            echo "PASS: action ran with manifest-file input"
+            echo "PASS: action processed the manifest-file input"
           else
             echo "FAIL: unexpected outcome: $OUTCOME"
             exit 1
+          fi
+      - name: Assert uv is available if action succeeded
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          if [ "$OUTCOME" = "success" ]; then
+            if ! command -v uv >/dev/null 2>&1; then
+              echo "FAIL: uv not found in PATH after successful action"
+              exit 1
+            fi
+            echo "PASS: uv is installed"
+          else
+            echo "INFO: action did not succeed (manifest URL may be invalid for this version), skipping uv check"
           fi

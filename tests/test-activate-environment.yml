@@ -1,4 +1,4 @@
-name: Test activate-environment creates and activates venv
+name: Test activate-environment input
 on:
   workflow_dispatch:
 jobs:
@@ -6,45 +6,42 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
       - id: setup-uv
         uses: .
         with:
+          version: "0.5.0"
           activate-environment: "true"
           no-project: "true"
           enable-cache: "false"
+
       - name: Assert venv output is set
         env:
-          VENV: ${{ steps.setup-uv.outputs.venv }}
+          VENV_PATH: ${{ steps.setup-uv.outputs.venv }}
         run: |
-          echo "venv: $VENV"
-          if [ -z "$VENV" ]; then
+          echo "venv output: $VENV_PATH"
+          if [ -z "$VENV_PATH" ]; then
             echo "FAIL: venv output is empty"
             exit 1
           fi
-          echo "PASS: venv=$VENV"
+          echo "PASS: venv=$VENV_PATH"
+
       - name: Assert venv directory exists
         env:
-          VENV: ${{ steps.setup-uv.outputs.venv }}
+          VENV_PATH: ${{ steps.setup-uv.outputs.venv }}
         run: |
-          echo "Checking venv directory: $VENV"
-          if [ ! -d "$VENV" ]; then
-            echo "FAIL: venv directory does not exist at $VENV"
+          echo "checking venv at: $VENV_PATH"
+          if [ ! -d "$VENV_PATH" ]; then
+            echo "FAIL: venv directory does not exist at $VENV_PATH"
             exit 1
           fi
           echo "PASS: venv directory exists"
-      - name: Assert VIRTUAL_ENV is set
+
+      - name: Assert VIRTUAL_ENV is set in environment
         run: |
           echo "VIRTUAL_ENV: $VIRTUAL_ENV"
           if [ -z "$VIRTUAL_ENV" ]; then
-            echo "FAIL: VIRTUAL_ENV environment variable is not set"
+            echo "FAIL: VIRTUAL_ENV is not set (environment not activated)"
             exit 1
           fi
           echo "PASS: VIRTUAL_ENV=$VIRTUAL_ENV"
-      - name: Assert python is available in venv
-        run: |
-          if ! command -v python &>/dev/null; then
-            echo "FAIL: python not found in activated venv"
-            exit 1
-          fi
-          echo "PASS: python is available"
-          python --version

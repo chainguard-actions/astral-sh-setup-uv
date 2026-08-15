@@ -6,36 +6,40 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
       - id: setup-uv
         uses: .
         with:
+          version: "0.5.0"
           enable-cache: "false"
-      - name: Assert uv is installed
-        run: |
-          if ! command -v uv &>/dev/null; then
-            echo "FAIL: uv not found on PATH"
-            exit 1
-          fi
-          echo "PASS: uv is installed"
-          uv --version
+
       - name: Assert uv-version output is set
         env:
           UV_VERSION: ${{ steps.setup-uv.outputs.uv-version }}
         run: |
           echo "uv-version: $UV_VERSION"
           if [ -z "$UV_VERSION" ]; then
-            echo "FAIL: uv-version output is empty even with cache disabled"
+            echo "FAIL: uv-version output is empty"
             exit 1
           fi
           echo "PASS: uv-version=$UV_VERSION"
-      - name: Assert cache-hit is false when cache is disabled
+
+      - name: Assert cache-hit output is false or empty when cache disabled
         env:
           CACHE_HIT: ${{ steps.setup-uv.outputs.cache-hit }}
         run: |
           echo "cache-hit: $CACHE_HIT"
           # When cache is disabled, cache-hit should be empty or false
           if [ "$CACHE_HIT" = "true" ]; then
-            echo "FAIL: cache-hit should not be true when enable-cache=false"
+            echo "FAIL: cache-hit should not be 'true' when enable-cache=false"
             exit 1
           fi
-          echo "PASS: cache-hit is not true (cache disabled)"
+          echo "PASS: cache-hit is not 'true' (cache disabled)"
+
+      - name: Assert uv is functional
+        run: |
+          if ! uv --version; then
+            echo "FAIL: uv is not functional"
+            exit 1
+          fi
+          echo "PASS: uv is functional"
