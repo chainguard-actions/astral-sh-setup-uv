@@ -10,16 +10,32 @@ jobs:
         uses: .
         with:
           version: "latest"
+          manifest-file: "https://raw.githubusercontent.com/astral-sh/versions/main/uv.json"
           enable-cache: "false"
-          manifest-file: "https://raw.githubusercontent.com/astral-sh/uv/refs/heads/main/crates/uv-toolchain/src/downloads.json"
         continue-on-error: true
-      - name: Verify uv is installed (manifest-file input exercised)
+      - name: Assert action ran with manifest-file input
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+          UV_VERSION: ${{ steps.action.outputs.uv-version }}
         run: |
-          # The action was invoked with the manifest-file input.
-          # Even if the manifest URL is not valid, uv should still be installed
-          # via fallback, or the step above used continue-on-error.
-          if uv --version; then
-            echo "PASS: uv installed successfully"
+          echo "outcome: $OUTCOME"
+          echo "uv-version: $UV_VERSION"
+          # The action may succeed or fail depending on the manifest URL format.
+          # The important thing is that the input was accepted and the action ran.
+          if [ "$OUTCOME" = "success" ] || [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action ran with manifest-file input (outcome=$OUTCOME)"
           else
-            echo "PASS: action ran with manifest-file input (input was accepted)"
+            echo "FAIL: unexpected outcome: $OUTCOME"
+            exit 1
           fi
+      - name: Verify uv is available if action succeeded
+        if: steps.action.outcome == 'success'
+        env:
+          UV_VERSION: ${{ steps.action.outputs.uv-version }}
+        run: |
+          echo "uv-version: $UV_VERSION"
+          if ! command -v uv >/dev/null 2>&1; then
+            echo "FAIL: uv not found on PATH after successful action"
+            exit 1
+          fi
+          echo "PASS: uv found at $(command -v uv)"

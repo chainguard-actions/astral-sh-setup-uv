@@ -1,0 +1,45 @@
+name: Test version-file input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create uv.toml with version constraint
+        run: |
+          cat > "$GITHUB_WORKSPACE/uv.toml" << 'EOF'
+          required-version = "==0.5.0"
+          EOF
+          echo "Created uv.toml:"
+          cat "$GITHUB_WORKSPACE/uv.toml"
+
+      - id: setup-uv
+        uses: .
+        with:
+          version-file: "uv.toml"
+          enable-cache: "false"
+
+      - name: Assert uv-version output is set
+        env:
+          UV_VERSION: ${{ steps.setup-uv.outputs.uv-version }}
+        run: |
+          echo "uv-version: $UV_VERSION"
+          if [ -z "$UV_VERSION" ]; then
+            echo "FAIL: uv-version output is empty"
+            exit 1
+          fi
+          echo "PASS: uv-version=$UV_VERSION"
+
+      - name: Assert uv binary is functional
+        run: |
+          if ! uv --version; then
+            echo "FAIL: uv is not functional"
+            exit 1
+          fi
+          echo "PASS: uv is functional"
+
+      - name: Cleanup uv.toml
+        if: always()
+        run: rm -f "$GITHUB_WORKSPACE/uv.toml"
