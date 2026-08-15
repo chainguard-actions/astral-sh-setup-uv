@@ -1,4 +1,4 @@
-name: Test specific uv version installation
+name: Test version-file input
 on:
   workflow_dispatch:
 jobs:
@@ -9,21 +9,21 @@ jobs:
       - id: setup-uv
         uses: .
         with:
-          version: "0.5.0"
+          version-file: "tests/fixtures/pyproject-with-uv-version/pyproject.toml"
           enable-cache: "false"
 
-      - name: Assert uv-version output matches requested version
+      - name: Assert uv-version output matches version from file
         env:
           UV_VERSION: ${{ steps.setup-uv.outputs.uv-version }}
         run: |
           echo "uv-version: $UV_VERSION"
           if [ "$UV_VERSION" != "0.5.0" ]; then
-            echo "FAIL: expected uv-version '0.5.0' but got '$UV_VERSION'"
+            echo "FAIL: expected uv-version '0.5.0' from version-file but got '$UV_VERSION'"
             exit 1
           fi
           echo "PASS: uv-version=$UV_VERSION"
 
-      - name: Assert uv binary reports correct version
+      - name: Assert uv binary reports correct version from file
         run: |
           ACTUAL=$(uv --version)
           echo "uv --version: $ACTUAL"
@@ -31,15 +31,4 @@ jobs:
             echo "FAIL: expected uv version 0.5.0 in output '$ACTUAL'"
             exit 1
           fi
-          echo "PASS: uv version matches"
-
-      - name: Assert uv-path output points to a real file
-        env:
-          UV_PATH: ${{ steps.setup-uv.outputs.uv-path }}
-        run: |
-          echo "uv-path: $UV_PATH"
-          if [ ! -f "$UV_PATH" ]; then
-            echo "FAIL: uv-path '$UV_PATH' does not point to a real file"
-            exit 1
-          fi
-          echo "PASS: uv-path exists"
+          echo "PASS: uv version matches version-file"

@@ -9,24 +9,41 @@ jobs:
       - id: setup-uv
         uses: .
         with:
-          version: "0.5.0"
-          python-version: "3.12"
+          version: "latest"
           enable-cache: "false"
+          python-version: "3.11"
+
       - name: Assert python-version output is set
         env:
-          PYTHON_VERSION: ${{ steps.setup-uv.outputs.python-version }}
+          PY_VERSION: ${{ steps.setup-uv.outputs.python-version }}
         run: |
-          echo "python-version output: $PYTHON_VERSION"
-          if [ -z "$PYTHON_VERSION" ]; then
+          echo "python-version: $PY_VERSION"
+          if [ -z "$PY_VERSION" ]; then
             echo "FAIL: python-version output is empty"
             exit 1
           fi
-          echo "PASS: python-version=$PYTHON_VERSION"
-      - name: Assert UV_PYTHON env var is set
+          echo "PASS: python-version=$PY_VERSION"
+
+      - name: Assert UV_PYTHON env var is set to requested version
         run: |
           echo "UV_PYTHON: $UV_PYTHON"
           if [ -z "$UV_PYTHON" ]; then
             echo "FAIL: UV_PYTHON env var is not set"
             exit 1
           fi
+          if ! echo "$UV_PYTHON" | grep -q "3.11"; then
+            echo "FAIL: UV_PYTHON '$UV_PYTHON' does not contain '3.11'"
+            exit 1
+          fi
           echo "PASS: UV_PYTHON=$UV_PYTHON"
+
+      - name: Assert uv can install the requested python version
+        run: |
+          uv python install 3.11
+          ACTUAL=$(uv run --python 3.11 python --version 2>&1)
+          echo "python --version: $ACTUAL"
+          if ! echo "$ACTUAL" | grep -q "3.11"; then
+            echo "FAIL: expected Python 3.11 but got '$ACTUAL'"
+            exit 1
+          fi
+          echo "PASS: Python 3.11 available via uv"

@@ -1,4 +1,4 @@
-name: Test activate-environment
+name: Test activate-environment feature
 on:
   workflow_dispatch:
 jobs:
@@ -9,34 +9,37 @@ jobs:
       - id: setup-uv
         uses: .
         with:
-          version: "0.5.0"
-          activate-environment: "true"
+          version: "latest"
           enable-cache: "false"
+          activate-environment: "true"
+
       - name: Assert venv output is set
         env:
           VENV: ${{ steps.setup-uv.outputs.venv }}
         run: |
-          echo "venv output: $VENV"
+          echo "venv: $VENV"
           if [ -z "$VENV" ]; then
             echo "FAIL: venv output is empty"
             exit 1
           fi
           echo "PASS: venv=$VENV"
+
       - name: Assert venv directory exists
         env:
           VENV: ${{ steps.setup-uv.outputs.venv }}
         run: |
-          echo "Checking venv directory: $VENV"
+          echo "venv path: $VENV"
           if [ ! -d "$VENV" ]; then
-            echo "FAIL: venv directory does not exist at $VENV"
+            echo "FAIL: venv directory '$VENV' does not exist"
             exit 1
           fi
           echo "PASS: venv directory exists"
-      - name: Assert python is available in venv
+
+      - name: Assert virtual environment is activated (VIRTUAL_ENV is set)
         run: |
-          if ! command -v python &>/dev/null; then
-            echo "FAIL: python not found in PATH after venv activation"
+          echo "VIRTUAL_ENV: $VIRTUAL_ENV"
+          if [ -z "$VIRTUAL_ENV" ]; then
+            echo "FAIL: VIRTUAL_ENV is not set — environment was not activated"
             exit 1
           fi
-          python --version
-          echo "PASS: python is available"
+          echo "PASS: VIRTUAL_ENV=$VIRTUAL_ENV"

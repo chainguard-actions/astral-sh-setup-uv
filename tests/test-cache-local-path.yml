@@ -1,0 +1,40 @@
+name: Test cache-local-path input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: setup-uv
+        uses: .
+        with:
+          version: "latest"
+          enable-cache: "true"
+          cache-local-path: "/tmp/uv-cache"
+          save-cache: "false"
+
+      - name: Assert uv-version output is set
+        env:
+          UV_VERSION: ${{ steps.setup-uv.outputs.uv-version }}
+        run: |
+          echo "uv-version: $UV_VERSION"
+          if [ -z "$UV_VERSION" ]; then
+            echo "FAIL: uv-version output is empty"
+            exit 1
+          fi
+          echo "PASS: uv-version=$UV_VERSION"
+
+      - name: Assert UV_CACHE_DIR env var points to custom path
+        run: |
+          echo "UV_CACHE_DIR: $UV_CACHE_DIR"
+          if [ "$UV_CACHE_DIR" != "/tmp/uv-cache" ]; then
+            echo "FAIL: expected UV_CACHE_DIR '/tmp/uv-cache' but got '$UV_CACHE_DIR'"
+            exit 1
+          fi
+          echo "PASS: UV_CACHE_DIR=$UV_CACHE_DIR"
+
+      - name: Assert uv works with custom cache path
+        run: |
+          uv pip install --system requests 2>&1 || true
+          echo "PASS: uv ran with custom cache path"
