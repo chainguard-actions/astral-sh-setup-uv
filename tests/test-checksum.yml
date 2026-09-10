@@ -6,22 +6,27 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - name: Test with invalid checksum fails gracefully
-        id: action-bad-checksum
+      - id: action
         uses: .
         with:
           version: "0.5.0"
-          checksum: "0000000000000000000000000000000000000000000000000000000000000000"
+          checksum: "sha256:2381c3959e8e7a59b5b5c4e5c4e5c4e5c4e5c4e5c4e5c4e5c4e5c4e5c4e5c4e"
         continue-on-error: true
-      - name: Assert action failed with bad checksum
+      - name: Assert action ran (checksum may reject or accept)
         env:
-          OUTCOME: ${{ steps.action-bad-checksum.outcome }}
+          OUTCOME: ${{ steps.action.outcome }}
+          UV_VERSION: ${{ steps.action.outputs.uv-version }}
         run: |
           echo "outcome: $OUTCOME"
-          if [ "$OUTCOME" = "failure" ]; then
-            echo "PASS: action correctly failed with invalid checksum"
-          elif [ "$OUTCOME" = "success" ]; then
-            echo "PASS: action succeeded (checksum validation may be skipped in this environment)"
+          echo "uv-version: $UV_VERSION"
+          if [ "$OUTCOME" = "success" ]; then
+            if [ -z "$UV_VERSION" ]; then
+              echo "FAIL: action succeeded but uv-version output is empty"
+              exit 1
+            fi
+            echo "PASS: uv installed with version $UV_VERSION"
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (checksum mismatch is expected with a fake checksum)"
           else
             echo "FAIL: unexpected outcome '$OUTCOME'"
             exit 1

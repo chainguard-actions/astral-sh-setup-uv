@@ -9,7 +9,7 @@ jobs:
       - id: action
         uses: .
         with:
-          version: "0.5.0"
+          version: "latest"
           enable-cache: "true"
           cache-suffix: "-myproject"
       - name: Assert uv-version output is set
@@ -28,16 +28,19 @@ jobs:
         run: |
           echo "cache-key: $CACHE_KEY"
           if [ -z "$CACHE_KEY" ]; then
-            echo "WARN: cache-key output is empty (may be expected in act environment)"
-          elif echo "$CACHE_KEY" | grep -q "myproject"; then
-            echo "PASS: cache-key contains the suffix"
+            echo "WARN: cache-key output is empty (may be expected if caching is disabled for this event)"
           else
-            echo "PASS: cache-key set (suffix may be embedded differently): $CACHE_KEY"
+            if echo "$CACHE_KEY" | grep -q -- "-myproject"; then
+              echo "PASS: cache-key contains the expected suffix '-myproject'"
+            else
+              echo "FAIL: cache-key '$CACHE_KEY' does not contain '-myproject'"
+              exit 1
+            fi
           fi
-      - name: Assert uv is installed
+      - name: Assert uv is on PATH
         run: |
           if ! command -v uv >/dev/null 2>&1; then
-            echo "FAIL: uv is not installed"
+            echo "FAIL: uv not found on PATH"
             exit 1
           fi
-          echo "PASS: uv is installed at $(command -v uv)"
+          echo "PASS: uv found at $(command -v uv)"
