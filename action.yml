@@ -101,7 +101,6 @@ outputs:
   python-cache-hit:
     description: "A boolean value to indicate the Python cache entry was found"
 runs:
-  pre: chainguard-phonehome.js
   using: "node24"
   main: "dist/setup/index.js"
   post: "dist/save-cache/index.js"

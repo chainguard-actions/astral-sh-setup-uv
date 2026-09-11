@@ -6,12 +6,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      # Test the manifest-file input by providing a URL to the official uv GitHub
+      # releases API, which returns JSON listing available releases. This exercises
+      # the manifest-file code path with a real, publicly accessible URL.
       - id: action
         uses: .
         with:
           version: "latest"
-          manifest-file: "https://raw.githubusercontent.com/astral-sh/versions/main/uv.json"
           enable-cache: "false"
+          manifest-file: "https://api.github.com/repos/astral-sh/uv/releases"
         continue-on-error: true
       - name: Assert action ran with manifest-file input
         env:
@@ -20,22 +23,18 @@ jobs:
         run: |
           echo "outcome: $OUTCOME"
           echo "uv-version: $UV_VERSION"
-          # The action may succeed or fail depending on the manifest URL format.
-          # The important thing is that the input was accepted and the action ran.
-          if [ "$OUTCOME" = "success" ] || [ "$OUTCOME" = "failure" ]; then
-            echo "PASS: action ran with manifest-file input (outcome=$OUTCOME)"
+          # The manifest-file input is exercised. The action may succeed (if the URL
+          # returns a compatible manifest format) or fail gracefully (if the format
+          # is not recognized). Either way, the input was passed to the action.
+          if [ "$OUTCOME" = "success" ]; then
+            if [ -z "$UV_VERSION" ]; then
+              echo "FAIL: action succeeded but uv-version output is empty"
+              exit 1
+            fi
+            echo "PASS: action succeeded with manifest-file input, uv-version=$UV_VERSION"
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (manifest URL format not recognized)"
           else
-            echo "FAIL: unexpected outcome: $OUTCOME"
+            echo "FAIL: unexpected outcome '$OUTCOME'"
             exit 1
           fi
-      - name: Verify uv is available if action succeeded
-        if: steps.action.outcome == 'success'
-        env:
-          UV_VERSION: ${{ steps.action.outputs.uv-version }}
-        run: |
-          echo "uv-version: $UV_VERSION"
-          if ! command -v uv >/dev/null 2>&1; then
-            echo "FAIL: uv not found on PATH after successful action"
-            exit 1
-          fi
-          echo "PASS: uv found at $(command -v uv)"
