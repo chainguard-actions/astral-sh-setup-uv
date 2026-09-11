@@ -1,0 +1,45 @@
+name: Test quiet mode installation
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: setup-uv
+        uses: .
+        with:
+          version: "latest"
+          enable-cache: "false"
+          quiet: "true"
+
+      - name: Assert uv-version output is set even in quiet mode
+        env:
+          UV_VERSION: ${{ steps.setup-uv.outputs.uv-version }}
+        run: |
+          echo "uv-version: $UV_VERSION"
+          if [ -z "$UV_VERSION" ]; then
+            echo "FAIL: uv-version output is empty in quiet mode"
+            exit 1
+          fi
+          echo "PASS: uv-version=$UV_VERSION"
+
+      - name: Assert uv-path output is set in quiet mode
+        env:
+          UV_PATH: ${{ steps.setup-uv.outputs.uv-path }}
+        run: |
+          echo "uv-path: $UV_PATH"
+          if [ -z "$UV_PATH" ]; then
+            echo "FAIL: uv-path output is empty in quiet mode"
+            exit 1
+          fi
+          if [ ! -f "$UV_PATH" ]; then
+            echo "FAIL: uv binary not found at $UV_PATH"
+            exit 1
+          fi
+          echo "PASS: uv binary exists at $UV_PATH"
+
+      - name: Assert uv is functional in quiet mode
+        run: |
+          uv --version
+          echo "PASS: uv is functional in quiet mode"

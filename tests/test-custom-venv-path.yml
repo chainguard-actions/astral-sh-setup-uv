@@ -1,0 +1,39 @@
+name: Test custom venv path with activate-environment
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: setup-uv
+        uses: .
+        with:
+          version: "latest"
+          enable-cache: "false"
+          activate-environment: "true"
+          venv-path: "/tmp/my-custom-venv"
+          no-project: "true"
+
+      - name: Assert venv output matches custom path
+        env:
+          VENV: ${{ steps.setup-uv.outputs.venv }}
+        run: |
+          echo "venv: $VENV"
+          if [ -z "$VENV" ]; then
+            echo "FAIL: venv output is empty"
+            exit 1
+          fi
+          if [ "$VENV" != "/tmp/my-custom-venv" ]; then
+            echo "FAIL: expected venv at /tmp/my-custom-venv but got $VENV"
+            exit 1
+          fi
+          echo "PASS: venv=$VENV"
+
+      - name: Assert custom venv directory exists
+        run: |
+          if [ ! -d "/tmp/my-custom-venv" ]; then
+            echo "FAIL: custom venv directory does not exist at /tmp/my-custom-venv"
+            exit 1
+          fi
+          echo "PASS: custom venv directory exists"
