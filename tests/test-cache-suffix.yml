@@ -9,7 +9,7 @@ jobs:
       - id: action
         uses: .
         with:
-          version: "latest"
+          version: "0.5.0"
           enable-cache: "true"
           cache-suffix: "-myproject"
       - name: Assert uv-version output is set
@@ -28,12 +28,12 @@ jobs:
         run: |
           echo "cache-key: $CACHE_KEY"
           if [ -z "$CACHE_KEY" ]; then
-            echo "WARN: cache-key output is empty (may be expected if nothing to cache)"
+            echo "WARN: cache-key output is empty (may be expected if cache is disabled)"
           else
             if echo "$CACHE_KEY" | grep -q "myproject"; then
-              echo "PASS: cache-key contains suffix"
+              echo "PASS: cache-key contains the suffix"
             else
-              echo "FAIL: cache-key does not contain expected suffix '-myproject'"
+              echo "FAIL: cache-key does not contain the expected suffix '-myproject'"
               exit 1
             fi
           fi
