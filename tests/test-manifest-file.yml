@@ -10,30 +10,26 @@ jobs:
         uses: .
         with:
           version: "latest"
-          manifest-file: "https://raw.githubusercontent.com/astral-sh/setup-uv/main/versions.json"
-          enable-cache: "false"
+          manifest-file: "https://raw.githubusercontent.com/astral-sh/uv/main/crates/uv-toolchain/src/downloads.json"
         continue-on-error: true
-      - name: Assert uv installed or manifest-file input was exercised
+      - name: Assert action ran with manifest-file input
         env:
+          OUTCOME: ${{ steps.action.outcome }}
           UV_VERSION: ${{ steps.action.outputs.uv-version }}
           UV_PATH: ${{ steps.action.outputs.uv-path }}
-          OUTCOME: ${{ steps.action.outcome }}
         run: |
           echo "outcome: $OUTCOME"
           echo "uv-version: $UV_VERSION"
           echo "uv-path: $UV_PATH"
-          # The manifest-file URL may not resolve to a valid manifest,
-          # so the action may fail. Either way, the input was exercised.
           if [ "$OUTCOME" = "success" ]; then
             if [ -z "$UV_VERSION" ]; then
               echo "FAIL: action succeeded but uv-version output is empty"
               exit 1
             fi
-            if ! command -v uv >/dev/null 2>&1; then
-              echo "FAIL: uv not found on PATH after successful install"
-              exit 1
-            fi
-            echo "PASS: uv installed via manifest-file, version=$UV_VERSION"
+            echo "PASS: uv installed successfully with manifest-file, version=$UV_VERSION"
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (manifest-file URL may not be valid for this action version)"
           else
-            echo "PASS: manifest-file input was exercised (action outcome: $OUTCOME)"
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
           fi

@@ -10,23 +10,24 @@ jobs:
         uses: .
         with:
           version: "0.5.0"
-          checksum: "sha256:2381c5278e8d7c0e8b8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8"
-          enable-cache: "false"
+          checksum: "sha256:2381c5278e4c8a9b7c8b0e5c4b7f8e9d0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d"
         continue-on-error: true
-      - name: Assert action ran (checksum mismatch expected to fail or succeed)
+      - name: Assert action ran (checksum mismatch expected to fail or uv installed)
         env:
-          UV_VERSION: ${{ steps.action.outputs.uv-version }}
           OUTCOME: ${{ steps.action.outcome }}
+          UV_VERSION: ${{ steps.action.outputs.uv-version }}
         run: |
           echo "outcome: $OUTCOME"
           echo "uv-version: $UV_VERSION"
-          # A fake checksum should cause the action to fail with a checksum error.
-          # We accept either: action failed (checksum mismatch) or succeeded (action ignores bad checksum).
-          # The important thing is that the input was accepted without a schema error.
-          if [ "$OUTCOME" = "failure" ]; then
-            echo "PASS: action failed as expected due to checksum mismatch"
-          elif [ "$OUTCOME" = "success" ] && [ -n "$UV_VERSION" ]; then
-            echo "PASS: action succeeded (checksum accepted)"
+          if [ "$OUTCOME" = "success" ]; then
+            if [ -z "$UV_VERSION" ]; then
+              echo "FAIL: action succeeded but uv-version is empty"
+              exit 1
+            fi
+            echo "PASS: uv installed with version=$UV_VERSION"
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed as expected (checksum mismatch with fake checksum)"
           else
-            echo "INFO: outcome=$OUTCOME, uv-version=$UV_VERSION — input was exercised"
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
           fi
