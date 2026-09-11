@@ -6,26 +6,41 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Get uv checksum for a known version
+        id: get-checksum
+        run: |
+          # Fetch the checksum for uv 0.5.0 linux x86_64 from GitHub releases
+          CHECKSUM=$(curl -sfL "https://github.com/astral-sh/uv/releases/download/0.5.0/uv-x86_64-unknown-linux-gnu.tar.gz.sha256" 2>/dev/null | awk '{print $1}' || echo "")
+          echo "checksum=$CHECKSUM"
+          echo "checksum=$CHECKSUM" >> "$GITHUB_OUTPUT"
       - id: action
         uses: .
         with:
           version: "0.5.0"
-          checksum: "sha256:2381c5278e4b8a7e3c5a5e3c5a5e3c5a5e3c5a5e3c5a5e3c5a5e3c5a5e3c5a5"
-        continue-on-error: true
-      - name: Assert uv installed or checksum rejected gracefully
+          checksum: ${{ steps.get-checksum.outputs.checksum }}
+      - name: Assert uv-version output is set
         env:
           UV_VERSION: ${{ steps.action.outputs.uv-version }}
-          OUTCOME: ${{ steps.action.outcome }}
         run: |
-          echo "outcome: $OUTCOME"
           echo "uv-version: $UV_VERSION"
-          # The action either succeeds (if checksum matches) or fails (if checksum is wrong).
-          # Since we provided a fake checksum, the action should fail gracefully.
-          # Either way, the input was exercised.
-          if [ "$OUTCOME" = "success" ]; then
-            echo "PASS: action succeeded (checksum matched)"
-          elif [ "$OUTCOME" = "failure" ]; then
-            echo "PASS: action failed as expected with wrong checksum"
-          else
-            echo "PASS: action outcome was $OUTCOME"
+          if [ -z "$UV_VERSION" ]; then
+            echo "FAIL: uv-version output is empty"
+            exit 1
           fi
+          echo "PASS: uv-version=$UV_VERSION"
+      - name: Assert uv is installed
+        run: |
+          if ! command -v uv >/dev/null 2>&1; then
+            echo "FAIL: uv is not installed"
+            exit 1
+          fi
+          echo "PASS: uv is installed at $(command -v uv)"
+      - name: Assert correct version installed
+        run: |
+          INSTALLED=$(uv --version | awk '{print $2}')
+          echo "installed version: $INSTALLED"
+          if [ "$INSTALLED" != "0.5.0" ]; then
+            echo "FAIL: expected 0.5.0 but got $INSTALLED"
+            exit 1
+          fi
+          echo "PASS: correct version installed"
