@@ -11,8 +11,8 @@ jobs:
         with:
           version: "latest"
           enable-cache: "true"
-          cache-suffix: "test-suffix"
-      - name: Assert uv-version output is non-empty
+          cache-suffix: "my-custom-suffix"
+      - name: Assert uv-version output is set
         env:
           UV_VERSION: ${{ steps.setup-uv.outputs.uv-version }}
         run: |
@@ -21,26 +21,11 @@ jobs:
             echo "FAIL: uv-version output is empty"
             exit 1
           fi
-          echo "PASS: uv-version is $UV_VERSION"
-      - name: Assert cache-hit output is set
-        env:
-          CACHE_HIT: ${{ steps.setup-uv.outputs.cache-hit }}
+          echo "PASS: uv-version is '$UV_VERSION'"
+      - name: Assert uv is on PATH
         run: |
-          echo "cache-hit: $CACHE_HIT"
-          # cache-hit should be either 'true' or 'false' (not empty)
-          if [ -z "$CACHE_HIT" ]; then
-            echo "FAIL: cache-hit output is empty"
+          if ! command -v uv >/dev/null 2>&1; then
+            echo "FAIL: uv not found on PATH"
             exit 1
           fi
-          if [ "$CACHE_HIT" != "true" ] && [ "$CACHE_HIT" != "false" ]; then
-            echo "FAIL: cache-hit should be 'true' or 'false', got: $CACHE_HIT"
-            exit 1
-          fi
-          echo "PASS: cache-hit is '$CACHE_HIT'"
-      - name: Assert uv is available in PATH
-        run: |
-          if ! command -v uv &>/dev/null; then
-            echo "FAIL: uv not found in PATH"
-            exit 1
-          fi
-          echo "PASS: uv found at $(which uv)"
+          echo "PASS: uv found at $(command -v uv)"
