@@ -1,32 +1,391 @@
-# astral-sh/setup-uv
+# setup-uv
 
-Set up your GitHub Actions workflow with a specific version of uv.
+Set up your GitHub Actions workflow with a specific version of [uv](https://docs.astral.sh/uv/).
 
-Hardened by [Chainguard](https://www.chainguard.dev) from the upstream action at [https://github.com/astral-sh/setup-uv](https://github.com/astral-sh/setup-uv).
+- Install a version of uv and add it to PATH
+- Cache the installed version of uv to speed up consecutive runs on self-hosted runners
+- Register problem matchers for error output
+- (Optional) Persist the uv's cache in the GitHub Actions Cache
+- (Optional) Verify the checksum of the downloaded uv executable
 
-## Versions
+## Contents
 
-| Version | Tag | Upstream commit |
-|---------|-----|-----------------|
-| v10.0.0 | [`v10.0.0`](https://github.com/chainguard-actions/astral-sh-setup-uv/tree/v10.0.0) | [`ae62891`](https://github.com/astral-sh/setup-uv/commit/ae62891fec2bb8e7d6c99fc78c9fec3a63790f8d) |
-| v10.0.1 | [`v10.0.1`](https://github.com/chainguard-actions/astral-sh-setup-uv/tree/v10.0.1) | [`20cfd1b`](https://github.com/astral-sh/setup-uv/commit/20cfd1bf945f4377ade1205e4dbc17946fc9a30d) |
-| v10.1.0 | [`v10.1.0`](https://github.com/chainguard-actions/astral-sh-setup-uv/tree/v10.1.0) | [`bec219d`](https://github.com/astral-sh/setup-uv/commit/bec219d24cd3e171d82865faccec33120bb574f4) |
-| v10.2.0 | [`v10.2.0`](https://github.com/chainguard-actions/astral-sh-setup-uv/tree/v10.2.0) | [`c18668a`](https://github.com/astral-sh/setup-uv/commit/c18668ad3cf93ea998bef934396af7bb5c839dc7) |
-| v3 | [`v3`](https://github.com/chainguard-actions/astral-sh-setup-uv/tree/v3) | [`caf0cab`](https://github.com/astral-sh/setup-uv/commit/caf0cab7a618c569241d31dcd442f54681755d39) |
-| v3.2 | [`v3.2`](https://github.com/chainguard-actions/astral-sh-setup-uv/tree/v3.2) | [`caf0cab`](https://github.com/astral-sh/setup-uv/commit/caf0cab7a618c569241d31dcd442f54681755d39) |
-| v3.2.4 | [`v3.2.4`](https://github.com/chainguard-actions/astral-sh-setup-uv/tree/v3.2.4) | [`caf0cab`](https://github.com/astral-sh/setup-uv/commit/caf0cab7a618c569241d31dcd442f54681755d39) |
-| v7 | [`v7`](https://github.com/chainguard-actions/astral-sh-setup-uv/tree/v7) | [`37802ad`](https://github.com/astral-sh/setup-uv/commit/37802adc94f370d6bfd71619e3f0bf239e1f3b78) |
-| v7.5 | [`v7.5`](https://github.com/chainguard-actions/astral-sh-setup-uv/tree/v7.5) | [`e06108d`](https://github.com/astral-sh/setup-uv/commit/e06108dd0aef18192324c70427afc47652e63a82) |
-| v7.5.0 | [`v7.5.0`](https://github.com/chainguard-actions/astral-sh-setup-uv/tree/v7.5.0) | [`e06108d`](https://github.com/astral-sh/setup-uv/commit/e06108dd0aef18192324c70427afc47652e63a82) |
-| v7.6 | [`v7.6`](https://github.com/chainguard-actions/astral-sh-setup-uv/tree/v7.6) | [`37802ad`](https://github.com/astral-sh/setup-uv/commit/37802adc94f370d6bfd71619e3f0bf239e1f3b78) |
-| v7.6.0 | [`v7.6.0`](https://github.com/chainguard-actions/astral-sh-setup-uv/tree/v7.6.0) | [`37802ad`](https://github.com/astral-sh/setup-uv/commit/37802adc94f370d6bfd71619e3f0bf239e1f3b78) |
-| v8.0.0 | [`v8.0.0`](https://github.com/chainguard-actions/astral-sh-setup-uv/tree/v8.0.0) | [`cec2083`](https://github.com/astral-sh/setup-uv/commit/cec208311dfd045dd5311c1add060b2062131d57) |
-| v8.1.0 | [`v8.1.0`](https://github.com/chainguard-actions/astral-sh-setup-uv/tree/v8.1.0) | [`0880764`](https://github.com/astral-sh/setup-uv/commit/08807647e7069bb48b6ef5acd8ec9567f424441b) |
-| v8.2.0 | [`v8.2.0`](https://github.com/chainguard-actions/astral-sh-setup-uv/tree/v8.2.0) | [`fac544c`](https://github.com/astral-sh/setup-uv/commit/fac544c07dec837d0ccb6301d7b5580bf5edae39) |
-| v8.3.0 | [`v8.3.0`](https://github.com/chainguard-actions/astral-sh-setup-uv/tree/v8.3.0) | [`d31148d`](https://github.com/astral-sh/setup-uv/commit/d31148d669074a8d0a63714ba94f3201e7020bc3) |
-| v8.3.1 | [`v8.3.1`](https://github.com/chainguard-actions/astral-sh-setup-uv/tree/v8.3.1) | [`f98e069`](https://github.com/astral-sh/setup-uv/commit/f98e06938123ccabd21905ea5d0069192241f9f1) |
-| v8.3.2 | [`v8.3.2`](https://github.com/chainguard-actions/astral-sh-setup-uv/tree/v8.3.2) | [`11f9893`](https://github.com/astral-sh/setup-uv/commit/11f9893b081a58869d3b5fccaea48c9e9e46f990) |
-| v9.0.0 | [`v9.0.0`](https://github.com/chainguard-actions/astral-sh-setup-uv/tree/v9.0.0) | [`c771a70`](https://github.com/astral-sh/setup-uv/commit/c771a70e6277c0a99b617c7a806ffedaca235ff9) |
+- [Usage](#usage)
+  - [Install the latest version (default)](#install-the-latest-version-default)
+  - [Install a specific version](#install-a-specific-version)
+  - [Install a version by supplying a semver range](#install-a-version-by-supplying-a-semver-range)
+  - [Python version](#python-version)
+  - [Validate checksum](#validate-checksum)
+  - [Enable Caching](#enable-caching)
+    - [Cache dependency glob](#cache-dependency-glob)
+  - [Local cache path](#local-cache-path)
+  - [Disable cache pruning](#disable-cache-pruning)
+  - [Ignore nothing to cache](#ignore-nothing-to-cache)
+  - [GitHub authentication token](#github-authentication-token)
+  - [UV_TOOL_DIR](#uv_tool_dir)
+  - [UV_TOOL_BIN_DIR](#uv_tool_bin_dir)
+  - [Tilde Expansion](#tilde-expansion)
+- [How it works](#how-it-works)
+- [FAQ](#faq)
+
+## Usage
+
+### Install the latest version (default)
+
+```yaml
+- name: Install the latest version of uv
+  uses: astral-sh/setup-uv@v4
+  with:
+    version: "latest"
+```
+
+For an example workflow, see
+[here](https://github.com/charliermarsh/autobot/blob/e42c66659bf97b90ca9ff305a19cc99952d0d43f/.github/workflows/ci.yaml).
+
+### Install a specific version
+
+```yaml
+- name: Install a specific version of uv
+  uses: astral-sh/setup-uv@v4
+  with:
+    version: "0.4.4"
+```
+
+### Install a version by supplying a semver range
+
+You can specify a [semver range](https://github.com/npm/node-semver?tab=readme-ov-file#ranges)
+to install the latest version that satisfies the range.
+
+```yaml
+- name: Install a semver range of uv
+  uses: astral-sh/setup-uv@v4
+  with:
+    version: ">=0.4.0"
+```
+
+```yaml
+- name: Pinning a minor version of uv
+  uses: astral-sh/setup-uv@v4
+  with:
+    version: "0.4.x"
+```
+
+### Python version
+
+You can use the input `python-version` to set the environment variable `UV_PYTHON` for the rest
+of your workflow.
+This will override any python version specifications in `pyproject.toml` and `.python-version`
+
+```yaml
+- name: Install the latest version of uv and set the python version to 3.12
+  uses: astral-sh/setup-uv@v4
+  with:
+    python-version: "3.12"
+```
+
+You can combine this with a matrix to test multiple python versions:
+
+```yaml
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install the latest version of uv and set the python version
+        uses: astral-sh/setup-uv@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Test with python ${{ matrix.python-version }}
+        run: uv run --frozen pytest
+```
+
+### Validate checksum
+
+You can specify a checksum to validate the downloaded executable. Checksums up to the default version
+are automatically verified by this action. The sha256 hashes can be found on the
+[releases page](https://github.com/astral-sh/uv/releases) of the uv repo.
+
+```yaml
+- name: Install a specific version and validate the checksum
+  uses: astral-sh/setup-uv@v4
+  with:
+    version: "0.3.1"
+    checksum: "e11b01402ab645392c7ad6044db63d37e4fd1e745e015306993b07695ea5f9f8"
+```
+
+### Enable caching
+
+If you enable caching, the [uv cache](https://docs.astral.sh/uv/concepts/cache/) will be uploaded to
+the GitHub Actions cache. This can speed up runs that reuse the cache by several minutes.
+
+> [!TIP]
+>
+> On self-hosted runners this is usually not needed since the cache generated by uv on the runner's
+> filesystem is not removed after a run. For more details see [Local cache path](#local-cache-path).
+
+You can optionally define a custom cache key suffix.
+
+```yaml
+- name: Enable caching and define a custom cache key suffix
+  id: setup-uv
+  uses: astral-sh/setup-uv@v4
+  with:
+    enable-cache: true
+    cache-suffix: "optional-suffix"
+```
+
+When the cache was successfully restored, the output `cache-hit` will be set to `true` and you can
+use it in subsequent steps. For example, to use the cache in the above case:
+
+```yaml
+- name: Do something if the cache was restored
+  if: steps.setup-uv.outputs.cache-hit == 'true'
+  run: echo "Cache was restored"
+```
+
+#### Cache dependency glob
+
+If you want to control when the GitHub Actions cache is invalidated, specify a glob pattern with the
+`cache-dependency-glob` input. The GitHub Actions cache will be invalidated if any file matching the glob pattern
+changes. If you use relative paths, they are relative to the repository root.
+
+> [!NOTE]
+>
+> The default is `**/uv.lock`.
+
+```yaml
+- name: Define a cache dependency glob
+  uses: astral-sh/setup-uv@v4
+  with:
+    enable-cache: true
+    cache-dependency-glob: "**/requirements*.txt"
+```
+
+```yaml
+- name: Define a list of cache dependency globs
+  uses: astral-sh/setup-uv@v4
+  with:
+    enable-cache: true
+    cache-dependency-glob: |
+      **/requirements*.txt
+      **/pyproject.toml
+```
+
+```yaml
+- name: Define an absolute cache dependency glob
+  uses: astral-sh/setup-uv@v4
+  with:
+    enable-cache: true
+    cache-dependency-glob: "/tmp/my-folder/requirements*.txt"
+```
+
+```yaml
+- name: Never invalidate the cache
+  uses: astral-sh/setup-uv@v4
+  with:
+    enable-cache: true
+    cache-dependency-glob: ""
+```
+
+### Local cache path
+
+This action controls where uv stores its cache on the runner's filesystem by setting `UV_CACHE_DIR`.
+It defaults to `setup-uv-cache` in the `TMP` dir, `D:\a\_temp\uv-tool-dir` on Windows and
+`/tmp/setup-uv-cache` on Linux/macOS. You can change the default by specifying the path with the
+`cache-local-path` input.
+
+```yaml
+- name: Define a custom uv cache path
+  uses: astral-sh/setup-uv@v4
+  with:
+    cache-local-path: "/path/to/cache"
+```
+
+### Disable cache pruning
+
+By default, the uv cache is pruned after every run, removing pre-built wheels, but retaining any
+wheels that were built from source. On GitHub-hosted runners, it's typically faster to omit those
+pre-built wheels from the cache (and instead re-download them from the registry on each run).
+However, on self-hosted or local runners, preserving the cache may be more efficient. See
+the [documentation](https://docs.astral.sh/uv/concepts/cache/#caching-in-continuous-integration) for
+more information.
+
+If you want to persist the entire cache across runs, disable cache pruning with the `prune-cache`
+input.
+
+```yaml
+- name: Don't prune the cache before saving it
+  uses: astral-sh/setup-uv@v4
+  with:
+    enable-cache: true
+    prune-cache: false
+```
+
+### Ignore nothing to cache
+
+By default, the action will fail if caching is enabled but there is nothing to upload (the uv cache directory does not exist).
+If you want to ignore this, set the `ignore-nothing-to-cache` input to `true`.
+
+```yaml
+- name: Ignore nothing to cache
+  uses: astral-sh/setup-uv@v4
+  with:
+    enable-cache: true
+    ignore-nothing-to-cache: true
+```
+
+### GitHub authentication token
+
+This action uses the GitHub API to fetch the uv release artifacts. To avoid hitting the GitHub API
+rate limit too quickly, an authentication token can be provided via the `github-token` input. By
+default, the `GITHUB_TOKEN` secret is used, which is automatically provided by GitHub Actions.
+
+If the default
+[permissions for the GitHub token](https://docs.github.com/en/actions/security-for-github-actions/security-guides/automatic-token-authentication#permissions-for-the-github_token)
+are not sufficient, you can provide a custom GitHub token with the necessary permissions.
+
+```yaml
+- name: Install the latest version of uv with a custom GitHub token
+  uses: astral-sh/setup-uv@v4
+  with:
+    github-token: ${{ secrets.CUSTOM_GITHUB_TOKEN }}
+```
+
+### UV_TOOL_DIR
+
+On Windows `UV_TOOL_DIR` is set to `uv-tool-dir` in the `TMP` dir (e.g. `D:\a\_temp\uv-tool-dir`).
+On GitHub hosted runners this is on the much faster `D:` drive.
+
+On all other platforms the tool environments are placed in the
+[default location](https://docs.astral.sh/uv/concepts/tools/#tools-directory).
+
+If you want to change this behaviour (especially on self-hosted runners) you can use the `tool-dir`
+input:
+
+```yaml
+- name: Install the latest version of uv with a custom tool dir
+  uses: astral-sh/setup-uv@v4
+  with:
+    tool-dir: "/path/to/tool/dir"
+```
+
+### UV_TOOL_BIN_DIR
+
+On Windows `UV_TOOL_BIN_DIR` is set to `uv-tool-bin-dir` in the `TMP` dir (e.g.
+`D:\a\_temp\uv-tool-bin-dir`). On GitHub hosted runners this is on the much faster `D:` drive. This
+path is also automatically added to the PATH.
+
+On all other platforms the tool binaries get installed to the
+[default location](https://docs.astral.sh/uv/concepts/tools/#the-bin-directory).
+
+If you want to change this behaviour (especially on self-hosted runners) you can use the
+`tool-bin-dir` input:
+
+```yaml
+- name: Install the latest version of uv with a custom tool bin dir
+  uses: astral-sh/setup-uv@v4
+  with:
+    tool-bin-dir: "/path/to/tool-bin/dir"
+```
+
+### Tilde Expansion
+
+This action supports expanding the `~` character to the user's home directory for the following inputs:
+
+- `cache-local-path`
+- `tool-dir`
+- `tool-bin-dir`
+- `cache-dependency-glob`
+
+```yaml
+- name: Expand the tilde character
+  uses: astral-sh/setup-uv@v4
+  with:
+    cache-local-path: "~/path/to/cache"
+    tool-dir: "~/path/to/tool/dir"
+    tool-bin-dir: "~/path/to/tool-bin/dir"
+    cache-dependency-glob: "~/my-cache-buster"
+```
+
+## How it works
+
+This action downloads uv from the uv repo's official
+[GitHub Releases](https://github.com/astral-sh/uv) and uses the
+[GitHub Actions Toolkit](https://github.com/actions/toolkit) to cache it as a tool to speed up
+consecutive runs on self-hosted runners.
+
+The installed version of uv is then added to the runner PATH, enabling subsequent steps to invoke it
+by name (`uv`).
+
+## FAQ
+
+### Do I still need `actions/setup-python` alongside `setup-uv`?
+
+No. This action is modelled as a drop-in replacement for `actions/setup-python` when using uv. With
+`setup-uv`, you can install a specific version of Python using `uv python install` rather than
+relying on `actions/setup-python`.
+
+For example:
+
+```yaml
+- name: Checkout the repository
+  uses: actions/checkout@main
+- name: Install the latest version of uv
+  uses: astral-sh/setup-uv@v4
+  with:
+    enable-cache: true
+- name: Test
+  run: uv run --frozen pytest
+```
+
+To install a specific version of Python, use
+[`uv python install`](https://docs.astral.sh/uv/guides/install-python/):
+
+```yaml
+- name: Install the latest version of uv
+  uses: astral-sh/setup-uv@v4
+  with:
+    enable-cache: true
+- name: Install Python 3.12
+  run: uv python install 3.12
+```
+
+### What is the default version?
+
+By default, this action installs the latest version of uv.
+
+If you require the installed version in subsequent steps of your workflow, use the `uv-version`
+output:
+
+```yaml
+- name: Checkout the repository
+  uses: actions/checkout@main
+- name: Install the default version of uv
+  id: setup-uv
+  uses: astral-sh/setup-uv@v4
+- name: Print the installed version
+  run: echo "Installed uv version is ${{ steps.setup-uv.outputs.uv-version }}"
+```
+
+## Acknowledgements
+
+`setup-uv` was initially written and published by [Kevin Stillhammer](https://github.com/eifinger)
+before moving under the official [Astral](https://github.com/astral-sh) GitHub organization. You can
+support Kevin's work in open source on [Buy me a coffee](https://www.buymeacoffee.com/eifinger) or
+[PayPal](https://paypal.me/kevinstillhammer).
+
+## License
+
+MIT
+
+<div align="center">
+  <a target="_blank" href="https://astral.sh" style="background:none">
+    <img src="https://raw.githubusercontent.com/astral-sh/uv/main/assets/svg/Astral.svg" alt="Made by Astral">
+  </a>
+</div>
 
 ## Privacy
 

@@ -1,0 +1,39 @@
+name: Test python-version input sets UV_PYTHON
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Prepare cache directory
+        run: mkdir -p /tmp/uv-cache
+      - id: action
+        uses: .
+        with:
+          version: "latest"
+          github-token: ${{ github.token }}
+          python-version: "3.11"
+          cache-local-path: /tmp/uv-cache
+      - name: Assert uv is installed
+        env:
+          UV_VERSION: ${{ steps.action.outputs.uv-version }}
+        run: |
+          echo "uv-version: $UV_VERSION"
+          if [ -z "$UV_VERSION" ]; then
+            echo "FAIL: uv-version output is empty"
+            exit 1
+          fi
+          echo "PASS: uv installed at version '$UV_VERSION'"
+      - name: Assert UV_PYTHON is set to requested version
+        run: |
+          echo "UV_PYTHON: $UV_PYTHON"
+          if [ -z "$UV_PYTHON" ]; then
+            echo "FAIL: UV_PYTHON is not set"
+            exit 1
+          fi
+          if [ "$UV_PYTHON" != "3.11" ]; then
+            echo "FAIL: expected UV_PYTHON='3.11' but got '$UV_PYTHON'"
+            exit 1
+          fi
+          echo "PASS: UV_PYTHON is set to '$UV_PYTHON'"
