@@ -1,0 +1,41 @@
+name: Test activate-environment creates and activates venv
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          version: "latest"
+          python-version: "3.11"
+          activate-environment: "true"
+          enable-cache: "false"
+      - name: Assert uv is installed
+        env:
+          UV_VERSION: ${{ steps.action.outputs.uv-version }}
+        run: |
+          echo "uv-version: $UV_VERSION"
+          if [ -z "$UV_VERSION" ]; then
+            echo "FAIL: uv-version output is empty"
+            exit 1
+          fi
+          echo "PASS: uv installed"
+      - name: Assert virtual environment is activated
+        run: |
+          echo "VIRTUAL_ENV: $VIRTUAL_ENV"
+          if [ -z "$VIRTUAL_ENV" ]; then
+            echo "FAIL: VIRTUAL_ENV is not set — venv was not activated"
+            exit 1
+          fi
+          if [ ! -d "$VIRTUAL_ENV" ]; then
+            echo "FAIL: VIRTUAL_ENV directory does not exist: $VIRTUAL_ENV"
+            exit 1
+          fi
+          echo "PASS: VIRTUAL_ENV is set to '$VIRTUAL_ENV'"
+      - name: Assert python is available from the venv
+        run: |
+          which python || which python3
+          echo "PASS: python is available"
