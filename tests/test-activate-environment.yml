@@ -1,0 +1,48 @@
+name: Test activate-environment feature
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: setup-uv
+        uses: .
+        with:
+          version: "latest-known"
+          activate-environment: "true"
+          no-project: "true"
+          enable-cache: "false"
+          ignore-empty-workdir: "true"
+      - name: Assert venv output is set
+        env:
+          VENV_PATH: ${{ steps.setup-uv.outputs.venv }}
+        run: |
+          echo "venv output: $VENV_PATH"
+          if [ -z "$VENV_PATH" ]; then
+            echo "FAIL: venv output is empty"
+            exit 1
+          fi
+          echo "PASS: venv=$VENV_PATH"
+      - name: Assert venv directory exists
+        env:
+          VENV_PATH: ${{ steps.setup-uv.outputs.venv }}
+        run: |
+          echo "checking venv at: $VENV_PATH"
+          if [ ! -d "$VENV_PATH" ]; then
+            echo "FAIL: venv directory does not exist at $VENV_PATH"
+            exit 1
+          fi
+          if [ ! -f "$VENV_PATH/bin/python" ] && [ ! -f "$VENV_PATH/bin/python3" ]; then
+            echo "FAIL: no python binary found in venv"
+            exit 1
+          fi
+          echo "PASS: venv directory exists and contains python"
+      - name: Assert python-runtime-id output (may be empty if Python not managed by uv)
+        env:
+          RUNTIME_ID: ${{ steps.setup-uv.outputs.python-runtime-id }}
+        run: |
+          echo "python-runtime-id: $RUNTIME_ID"
+          # python-runtime-id may be empty if uv uses system Python
+          # We just log it without failing
+          echo "PASS: python-runtime-id check complete (value: '$RUNTIME_ID')"

@@ -1,0 +1,31 @@
+name: Test python-arch input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: setup-uv
+        uses: .
+        with:
+          version: "latest-known"
+          python-arch: "x86_64"
+          enable-cache: "false"
+          ignore-empty-workdir: "true"
+      - name: Assert UV_PYTHON_ARCH env var is set correctly
+        run: |
+          echo "UV_PYTHON_ARCH: $UV_PYTHON_ARCH"
+          if [ -z "$UV_PYTHON_ARCH" ]; then
+            echo "FAIL: UV_PYTHON_ARCH env var is not set"
+            exit 1
+          fi
+          if [ "$UV_PYTHON_ARCH" != "x86_64" ]; then
+            echo "FAIL: expected UV_PYTHON_ARCH=x86_64 but got $UV_PYTHON_ARCH"
+            exit 1
+          fi
+          echo "PASS: UV_PYTHON_ARCH=$UV_PYTHON_ARCH"
+      - name: Assert uv is functional
+        run: |
+          uv --version
+          echo "PASS: uv is functional"
