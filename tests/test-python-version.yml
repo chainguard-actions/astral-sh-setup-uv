@@ -1,0 +1,29 @@
+name: Test python-version sets UV_PYTHON
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          version: "0.6.0"
+          python-version: "3.12"
+          enable-cache: "false"
+      - name: Assert UV_PYTHON and output
+        env:
+          PYV: ${{ steps.action.outputs.python-version }}
+        run: |
+          echo "UV_PYTHON: $UV_PYTHON"
+          echo "python-version output: $PYV"
+          if [ "$UV_PYTHON" != "3.12" ]; then
+            echo "FAIL: expected UV_PYTHON=3.12"
+            exit 1
+          fi
+          case "$PYV" in
+            ""|3.12*) ;;
+            *) echo "FAIL: expected python-version output to start with 3.12"; exit 1 ;;
+          esac
+          echo "PASS"

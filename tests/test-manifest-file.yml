@@ -1,0 +1,35 @@
+name: Test custom manifest-file
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          version: "0.5.0"
+          enable-cache: "false"
+          manifest-file: "https://raw.githubusercontent.com/astral-sh/versions/main/v1/uv.ndjson"
+      - name: Assert outputs
+        env:
+          VERSION: ${{ steps.action.outputs.uv-version }}
+          UV_PATH: ${{ steps.action.outputs.uv-path }}
+        run: |
+          echo "uv-version: $VERSION"
+          echo "uv-path: $UV_PATH"
+          if [ "$VERSION" != "0.5.0" ]; then
+            echo "FAIL: expected uv-version 0.5.0"
+            exit 1
+          fi
+          if [ ! -x "$UV_PATH" ]; then
+            echo "FAIL: uv-path is not executable"
+            exit 1
+          fi
+          OUT="$(uv --version)"
+          echo "uv --version: $OUT"
+          case "$OUT" in
+            *"0.5.0"*) echo "PASS" ;;
+            *) echo "FAIL: expected 0.5.0 in uv --version"; exit 1 ;;
+          esac

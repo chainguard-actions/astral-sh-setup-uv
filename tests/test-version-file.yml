@@ -1,0 +1,24 @@
+name: Test version-file
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          version-file: tests/fixtures/version-file/pyproject.toml
+          enable-cache: "false"
+      - name: Assert version from file
+        env:
+          VERSION: ${{ steps.action.outputs.uv-version }}
+        run: |
+          echo "uv-version: $VERSION"
+          if [ "$VERSION" != "0.5.14" ]; then
+            echo "FAIL: expected 0.5.14"
+            exit 1
+          fi
+          uv --version | grep -q "0.5.14" || { echo "FAIL: uv --version mismatch"; exit 1; }
+          echo "PASS"

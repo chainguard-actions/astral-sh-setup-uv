@@ -1,0 +1,49 @@
+name: Test activate-environment
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          version: "latest"
+          python-version: "3.12"
+          activate-environment: "true"
+          venv-path: ${{ runner.temp }}/test-venv
+          no-project: "true"
+          enable-cache: "false"
+      - name: Assert venv activated
+        env:
+          VENV: ${{ steps.action.outputs.venv }}
+          RUNTIME_ID: ${{ steps.action.outputs.python-runtime-id }}
+        run: |
+          echo "venv output: $VENV"
+          echo "VIRTUAL_ENV: $VIRTUAL_ENV"
+          echo "python-runtime-id: $RUNTIME_ID"
+          if [ -z "$VENV" ]; then
+            echo "FAIL: venv output empty"
+            exit 1
+          fi
+          if [ -z "$VIRTUAL_ENV" ]; then
+            echo "FAIL: VIRTUAL_ENV not set"
+            exit 1
+          fi
+          case "$VENV" in
+            *test-venv*) ;;
+            *) echo "FAIL: venv output does not point at custom venv-path"; exit 1 ;;
+          esac
+          if [ ! -d "$VENV" ]; then
+            echo "FAIL: venv dir does not exist"
+            exit 1
+          fi
+          PY="$(command -v python)"
+          echo "python: $PY"
+          case "$PY" in
+            "$VIRTUAL_ENV"/*) ;;
+            *) echo "FAIL: python not from venv"; exit 1 ;;
+          esac
+          python -c 'import sys; assert sys.version_info[:2] == (3, 12), sys.version'
+          echo "PASS"
