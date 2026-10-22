@@ -1,0 +1,7 @@
+[project]
+name = "fixture"
+version = "0.1.0"
+requires-python = ">=3.9"
+
+[tool.uv]
+required-version = "==0.5.1"

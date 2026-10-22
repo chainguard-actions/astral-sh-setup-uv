@@ -1,0 +1,28 @@
+name: Test tool-dir and tool-bin-dir
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          version: "0.5.0"
+          tool-dir: /tmp/uv-tool-dir
+          tool-bin-dir: /tmp/uv-tool-bin-dir
+          enable-cache: "false"
+      - name: Assert env vars
+        run: |
+          echo "UV_TOOL_DIR: $UV_TOOL_DIR"
+          echo "UV_TOOL_BIN_DIR: $UV_TOOL_BIN_DIR"
+          if [ "$UV_TOOL_DIR" != "/tmp/uv-tool-dir" ]; then
+            echo "FAIL: UV_TOOL_DIR not set correctly"
+            exit 1
+          fi
+          if [ "$UV_TOOL_BIN_DIR" != "/tmp/uv-tool-bin-dir" ]; then
+            echo "FAIL: UV_TOOL_BIN_DIR not set correctly"
+            exit 1
+          fi
+          echo "PASS"

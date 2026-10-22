@@ -1,0 +1,33 @@
+name: Test cache-suffix is appended to cache key
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          version: "0.5.0"
+          enable-cache: "true"
+          restore-cache: "false"
+          save-cache: "false"
+          cache-local-path: ${{ runner.temp }}/uv-cache-suffix-test
+          cache-suffix: my-suffix
+      - name: Assert cache-key ends with suffix
+        env:
+          CACHE_KEY: ${{ steps.action.outputs.cache-key }}
+          VERSION: ${{ steps.action.outputs.uv-version }}
+        run: |
+          echo "cache-key: $CACHE_KEY"
+          echo "uv-version: $VERSION"
+          case "$CACHE_KEY" in
+            setup-uv-*-my-suffix) echo "PASS: suffix present" ;;
+            *) echo "FAIL: expected cache-key starting with setup-uv- and ending with -my-suffix"; exit 1 ;;
+          esac
+          if [ "$VERSION" != "0.5.0" ]; then
+            echo "FAIL: expected uv-version 0.5.0"
+            exit 1
+          fi
+          echo "PASS"
