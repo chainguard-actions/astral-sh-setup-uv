@@ -1,0 +1,29 @@
+name: Test tool-dir and tool-bin-dir
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          version: "0.6.0"
+          enable-cache: "false"
+          tool-dir: /tmp/uv-tool-dir
+          tool-bin-dir: /tmp/uv-tool-bin-dir
+          python-version: "3.12"
+      - name: Assert env vars
+        env:
+          PYV: ${{ steps.action.outputs.python-version }}
+        run: |
+          echo "UV_TOOL_DIR=$UV_TOOL_DIR"
+          echo "UV_TOOL_BIN_DIR=$UV_TOOL_BIN_DIR"
+          echo "UV_PYTHON=$UV_PYTHON"
+          echo "python-version output: $PYV"
+          [ "$UV_TOOL_DIR" = "/tmp/uv-tool-dir" ] || { echo "FAIL: UV_TOOL_DIR"; exit 1; }
+          [ "$UV_TOOL_BIN_DIR" = "/tmp/uv-tool-bin-dir" ] || { echo "FAIL: UV_TOOL_BIN_DIR"; exit 1; }
+          [ "$UV_PYTHON" = "3.12" ] || { echo "FAIL: UV_PYTHON"; exit 1; }
+          [ "$PYV" = "3.12" ] || { echo "FAIL: python-version output"; exit 1; }
+          echo "PASS"
